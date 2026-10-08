@@ -13,13 +13,13 @@ It is a member of the `zu*` family (sibling checkouts in `../`), the first whose
 
 ## Current state
 
-**2026-10-08: Stage 0 is in review.** Its pull request delivers the following, and every other export arrives from Stage 1:
+**2026-10-08: Stage 0 is done (#11); Stage 1 is next.** Stage 0 delivered the following, and every other export arrives from Stage 1:
 - plutosvg 0.0.8 and plutovg 1.3.3, vendored with seven patches;
 - `tools/update-plutosvg`, `verify-vendor`, `check-symbols` and `check-use-chain`;
 - `zusvg_info()`;
 - `vendor.yaml` and `vendor-upstream.yaml`.
 
-`devtools::check(cran = TRUE)` is 0/0/0 on macOS arm64, and both clang and GCC 16 build the vendored code with no warning under CRAN's `-Wall -pedantic`. The feature survey is in design §3: the audience is icons and logos, and clip paths warn for 0.1.0 (D15). Tracking: parent #2, stages #3–#10.
+`devtools::check(cran = TRUE)` is 0/0/0, and every CI leg is green, including Windows and the C23 `clang23` container. The feature survey is in design §3: the audience is icons and logos, and clip paths warn for 0.1.0 (D15). Tracking: parent #2, stages #3–#10 (#3 closed).
 
 Update this paragraph at the end of every stage.
 

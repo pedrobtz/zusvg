@@ -73,7 +73,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 0 — Vendor trees, patch set, update and verify tools, first build · L
 
-**Status:** in review (#11). Every exit criterion is met locally on macOS arm64, and the first CI run passed on every leg except `clang23`, which `0007` addresses.
+**Status:** done 2026-10-08 (#11). Every exit criterion is met, with every CI leg green, including Windows and `clang23`.
 
 **Goal:** both libraries compile into `zusvg.so` on Linux, macOS and Windows, byte-identical to their tags plus a recorded patch set, with no forbidden symbol, and the package checks 0/0/0 before any `svg_*` function exists.
 
