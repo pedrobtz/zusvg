@@ -6,7 +6,7 @@
 #' The surface size: with neither `width` nor `height`, the document's size
 #' ([svg_size()]) times `scale`, rounded up; with one, the other follows the
 #' document's aspect ratio; with both, the document is stretched to fill
-#' them, as `rsvg::rsvg()` does.
+#' them, as the rsvg package's `rsvg()` does.
 #'
 #' @inheritParams svg_size
 #' @param width,height The surface size in pixels; see Details.
@@ -25,10 +25,10 @@
 #'   * `"native"`, a `nativeRaster` that [grid::rasterGrob()] and
 #'     [graphics::rasterImage()] draw without conversion;
 #'   * `"array"`, a `height x width x 4` double array in `[0, 1]`, the shape
-#'     `rsvg::rsvg()` returns, which [as.raster()] and [png::writePNG()]
+#'     rsvg's `rsvg()` returns, which [as.raster()] and [png::writePNG()]
 #'     take;
 #'   * `"raw"`, RGBA bytes with `dim = c(4, width, height)`, the shape
-#'     `rsvg::rsvg_raw()` returns and `magick::image_read()` takes.
+#'     rsvg's `rsvg_raw()` returns and magick's `image_read()` takes.
 #' @param max_pixels The most pixels the surface may have, at most
 #'   `2^29 - 1`, or `Inf` for that.
 #' @param quiet Reserved: will silence the warning for text that does not

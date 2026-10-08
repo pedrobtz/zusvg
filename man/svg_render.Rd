@@ -46,10 +46,10 @@ fallback, as plutosvg does.}
 \item \code{"native"}, a \code{nativeRaster} that \code{\link[grid:rasterGrob]{grid::rasterGrob()}} and
 \code{\link[graphics:rasterImage]{graphics::rasterImage()}} draw without conversion;
 \item \code{"array"}, a \verb{height x width x 4} double array in \verb{[0, 1]}, the shape
-\code{rsvg::rsvg()} returns, which \code{\link[=as.raster]{as.raster()}} and \code{\link[png:writePNG]{png::writePNG()}}
+rsvg's \code{rsvg()} returns, which \code{\link[=as.raster]{as.raster()}} and \code{\link[png:writePNG]{png::writePNG()}}
 take;
 \item \code{"raw"}, RGBA bytes with \code{dim = c(4, width, height)}, the shape
-\code{rsvg::rsvg_raw()} returns and \code{magick::image_read()} takes.
+rsvg's \code{rsvg_raw()} returns and magick's \code{image_read()} takes.
 }}
 
 \item{max_pixels}{The most pixels the surface may have, at most
@@ -73,7 +73,7 @@ Draws the document onto a surface of the requested size, cleared to
 The surface size: with neither \code{width} nor \code{height}, the document's size
 (\code{\link[=svg_size]{svg_size()}}) times \code{scale}, rounded up; with one, the other follows the
 document's aspect ratio; with both, the document is stretched to fill
-them, as \code{rsvg::rsvg()} does.
+them, as the rsvg package's \code{rsvg()} does.
 }
 \examples{
 r <- svg_render('<svg xmlns="http://www.w3.org/2000/svg" width="16"
