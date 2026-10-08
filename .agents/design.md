@@ -230,7 +230,7 @@ Vendoring follows zucbor §13 and the template: the two trees live byte-identica
 | connection | read whole with `readBin()` in 64 KiB blocks up to `max_size + 1` (zucbor's `zu_read_bounded()`, `R/read.R`) |
 | file (`svg_read()`) | read whole through `file()`, which decompresses gzip (`.svgz`) itself |
 
-gzip needs no dependency (*decided at Stage 1*, D16). R's `file()` decompresses a `.svgz` file transparently. A raw vector or connection that starts with the gzip magic bytes is decompressed through `gzcon(rawConnection())`. Either way the bytes pass through the same bounded read, so `max_size` caps the decompressed size and a small compression bomb fails as `zusvg_limit_error`. Corrupt gzip decompresses to nothing and fails as `zusvg_parse_error`. The RFC planned `zukomp::komp_decompress()` for this; zukomp is now needed only for PNG compression (§7).
+gzip needs no dependency (*decided at Stage 1*, D16). R's `file()` decompresses a `.svgz` file transparently. A raw vector or connection that starts with the gzip magic bytes is written to a temporary file and read back through `gzfile()`. `gzcon(rawConnection())` was the first choice, but valgrind showed R's own `do_gzcon()` reading uninitialised memory (R 4.6). Either way the bytes pass through the same bounded read, so `max_size` caps the decompressed size and a small compression bomb fails as `zusvg_limit_error`. Corrupt gzip fails as `zusvg_parse_error` with `offset = NA`. The RFC planned `zukomp::komp_decompress()` for this; zukomp is now needed only for PNG compression (§7).
 
 ---
 
@@ -336,7 +336,7 @@ Measured by `tools/run-benchmarks` against `rsvg` and `magick` where installed, 
 | D13 | Internal prefix | `zsg_` / `ZSG_`, not the RFC's `zsv_` (§3; *read 2026-10-08*) |
 | D14 | Exact hashes | checked in CI's conformance job and under `skip_on_cran()`; CRAN's tests use a one-level pixel tolerance (§15) |
 | D15 | Clip paths | for 0.1.0, a `zusvg_clip_skipped` warning when a document references a clip path that is not a full-canvas rectangle, with `has_clip` in `svg_elements()`; a patch applying `clip-path`, offered upstream, after 0.1.0 (§3's survey; §18 Q8) |
-| D16 | gzip input | decompressed with base R (`file()`, `gzcon()`) under the bounded read; no zukomp, and no `zusvg_unsupported_input` class (§10) |
+| D16 | gzip input | decompressed with base R (`file()`, `gzfile()`) under the bounded read; no zukomp, and no `zusvg_unsupported_input` class (§10) |
 
 Reasons where they are not in the section cited:
 

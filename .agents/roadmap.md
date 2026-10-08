@@ -137,7 +137,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 1 — `svg_load()`, `svg_read()`, `svg_size()`, errors, limits, pre-scan · M
 
-**Status:** in review.
+**Status:** in review. The valgrind leg found R reading uninitialised memory in `gzcon(rawConnection())`, so gzip bytes now go through a temporary file and `gzfile()`.
 
 **Do**
 
@@ -155,7 +155,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 **What actually happened**
 
 - **The pre-scan is a line-for-line port of the loader's tokenizer** (`src/zsg_scan.c`), not a separate approximation. In a local run of 20 000 random tag soups, every document the pre-scan passed and the loader refused was a zero-size root. That is the only refusal left to the loader, and it carries `offset = NA`.
-- **gzip needs no zukomp** (design D16). R's `file()` and `gzcon()` decompress, under the same bounded read, so `max_size` caps the decompressed size. `zusvg_unsupported_input` is gone, and Stage 6 keeps only PNG compression.
+- **gzip needs no zukomp** (design D16). R's `file()` and `gzfile()` decompress, under the same bounded read, so `max_size` caps the decompressed size. `zusvg_unsupported_input` is gone, and Stage 6 keeps only PNG compression.
 - **Encoding.** A NUL byte is refused as `zusvg_encoding_error` with its offset: plutosvg would accept it, but R strings cannot hold one, and XML forbids it. Invalid UTF-8 has `offset = NA`, since `zuf_utf8_valid()` reports no position.
 - **The element list** (id, tag, text in subtree, for the elements plutosvg builds) is recorded by the pre-scan at load and kept on the R object for `svg_elements()` (Stage 4).
 - **`max_size` is capped at `2^31 - 1`**, because plutosvg takes the length as an `int`.

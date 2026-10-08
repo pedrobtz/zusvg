@@ -71,11 +71,22 @@ zsg_input_bytes <- function(x, max_size, call) {
     zsg_raise_fault(list(status = "ZSG_ERR_SIZE", offset = max_size),
                     list(max_size = max_size), call)
   }
-  # gzip (.svgz): decompressed through base R's gzcon(), under the same
-  # bounded read, so max_size caps the decompressed size and a small
-  # compression bomb fails as a limit error (design §10).
+  # gzip (.svgz): decompressed by base R's gzfile() under the same bounded
+  # read, so max_size caps the decompressed size and a small compression
+  # bomb fails as a limit error (design §10). Through a temporary file, not
+  # gzcon(rawConnection()), whose setup reads uninitialised memory in R
+  # itself (valgrind, R 4.6).
   if (length(bytes) >= 2L && bytes[1] == as.raw(0x1f) && bytes[2] == as.raw(0x8b)) {
-    bytes <- zsg_read_bounded(gzcon(rawConnection(bytes)), max_size, "x", call)
+    path <- tempfile(fileext = ".svgz")
+    on.exit(unlink(path), add = TRUE)
+    writeBin(bytes, path)
+    bytes <- withCallingHandlers(
+      zsg_read_bounded(gzfile(path), max_size, "x", call),
+      warning = function(w) {
+        zsg_abort("zusvg_parse_error", paste0("input is not valid gzip: ", conditionMessage(w)),
+                  offset = NA_real_, call = call)
+      }
+    )
   }
   bytes
 }
