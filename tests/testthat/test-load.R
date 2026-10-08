@@ -164,18 +164,11 @@ test_that("a document saved and restored must be loaded again", {
 test_that("loading many documents leaves resident memory flat", {
   skip_heavy()
   skip_if_not(file.exists("/proc/self/status"), "needs /proc")
-  rss <- function() {
-    s <- readLines("/proc/self/status")
-    as.numeric(sub("\\D+(\\d+).*", "\\1", grep("^VmRSS", s, value = TRUE)))
-  }
+  # covr's tracing grows memory on its own.
+  skip_if(identical(Sys.getenv("R_COVR"), "true"), "under covr")
   big <- svg_text(strrep('<rect width="1" height="1"/>', 1000))
-  for (i in 1:50) svg_load(big)
-  gc()
-  before <- rss()
-  for (i in 1:1000) svg_load(big)
-  gc()
-  # Kilobytes. Each document holds over 100 KB in C (its 28 KB of bytes and
-  # plutosvg's heap of elements and attributes), so 1000 leaked ones would
-  # be over 100 MB.
-  expect_lt(rss() - before, 15000)
+  # Each document holds over 100 KB in C (its 28 KB of bytes and plutosvg's
+  # heap), so a leak grows every window of 500 loads by over 50 MB. The
+  # first window absorbs R's own heap growth; the second must stay flat.
+  expect_flat_rss(function() svg_load(big), n = 500, kb = 25000)
 })
