@@ -1,0 +1,40 @@
+#!/usr/bin/env Rscript
+# Regenerate tests/testthat/fixtures/hashes.tsv: the pinned render hash of
+# every fixture SVG, at a fixed width (.agents/design.md §15).
+#
+#   tools/update-fixtures            check: fail if a hash would change
+#   tools/update-fixtures --record   rewrite hashes.tsv
+#
+# Run from the package root. It loads the package from source, so the
+# hashes are the current code's. Only record after understanding why a
+# hash moved: a change in the pixels is a change in behaviour.
+args <- commandArgs(trailingOnly = TRUE)
+record <- "--record" %in% args
+suppressMessages(pkgload::load_all(".", quiet = TRUE))
+
+dir <- "tests/testthat/fixtures"
+source(file.path("tests", "testthat", "helper-render.R"))
+files <- sort(list.files(dir, pattern = "\\.svg$"))
+width <- 48
+rows <- lapply(files, function(f) {
+  r <- svg_render(svg_read(file.path(dir, f)), width = width)
+  data.frame(file = f, width = ncol(r), height = nrow(r), md5 = render_hash(r))
+})
+new <- do.call(rbind, rows)
+path <- file.path(dir, "hashes.tsv")
+
+if (record) {
+  write.table(new, path, sep = "\t", quote = FALSE, row.names = FALSE)
+  cat(sprintf("==> wrote %s (%d fixtures)\n", path, nrow(new)))
+} else {
+  old <- read.delim(path, colClasses = "character")
+  new[] <- lapply(new, as.character)
+  diff <- merge(old, new, by = "file", all = TRUE, suffixes = c(".pinned", ".now"))
+  bad <- diff[!(diff$md5.pinned %in% diff$md5.now) | is.na(diff$md5.pinned) |
+              is.na(diff$md5.now) | diff$md5.pinned != diff$md5.now, ]
+  if (nrow(bad)) {
+    print(bad, row.names = FALSE)
+    stop("render hashes differ from hashes.tsv; rerun with --record if intended")
+  }
+  cat(sprintf("==> %d fixture hashes match\n", nrow(new)))
+}
