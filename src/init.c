@@ -8,7 +8,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"zusvg_load",         (DL_FUNC) &zusvg_load,         5},
     {"zusvg_status_names", (DL_FUNC) &zusvg_status_names, 0},
     {"zusvg_doc_alive",    (DL_FUNC) &zusvg_doc_alive,    1},
-    {"zusvg_render_native", (DL_FUNC) &zusvg_render_native, 6},
+    {"zusvg_render_native", (DL_FUNC) &zusvg_render_native, 9},
+    {"zusvg_extents",      (DL_FUNC) &zusvg_extents,      2},
+    {"zusvg_native_to_array", (DL_FUNC) &zusvg_native_to_array, 1},
+    {"zusvg_native_to_raw", (DL_FUNC) &zusvg_native_to_raw, 1},
     {NULL, NULL, 0}
 };
 

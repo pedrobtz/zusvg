@@ -194,7 +194,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 3 — `"array"`, `"raw"`, `id`, `svg_extents()`, colours, palette · M
 
-**Status:** not started.
+**Status:** in review.
 
 **Do**
 
@@ -208,6 +208,16 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 **Exit**
 
 - Every §5 render argument has a test; the `rsvg` shape parity tests pass where `rsvg` is installed.
+
+**What actually happened**
+
+- **Patch `0008-use-symbol-size`** (D17), found by Stage 2's contact sheet. A `<use>`'s `width` and `height` now size the `<symbol>` it references. Only the `use-symbol` fixture's hash moved, and its new pixels were checked.
+- **The forms come from the native buffer in C.** `"array"` and `"raw"` are built in one pass from the packed colours, so they are identical by construction, and `test-outputs.R` cross-checks pixels.
+- **Edge cases:**
+  - An `id` whose element draws nothing has zero extents and fails as `zusvg_render_error`.
+  - Palette names given with their `--` are accepted.
+  - The palette is copied with `R_alloc()` before the surface exists, so its callback never touches R.
+- **The `rsvg` cross-check** of pixels within tolerance stays in Stage 6's conformance job, where `rsvg` is installed. `rsvg` is not installed locally, so the shape-parity test was skipped here.
 
 ---
 

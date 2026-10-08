@@ -10,23 +10,33 @@
 #'
 #' @inheritParams svg_size
 #' @param width,height The surface size in pixels; see Details.
-#' @param id Not yet supported: must be `NULL`.
+#' @param id The `id` of one element to render alone, cropped to its
+#'   extents ([svg_extents()]); `NULL` renders the whole document.
 #' @param scale The factor applied to the document's size when neither
 #'   `width` nor `height` is given.
 #' @param background The colour the surface is cleared to before drawing:
 #'   anything [grDevices::col2rgb()] takes, including `"transparent"`.
 #' @param color The colour CSS `currentColor` resolves to.
-#' @param palette Not yet supported: must be `NULL`.
-#' @param as The form of the result: only `"native"` so far, a
-#'   `nativeRaster` that [grid::rasterGrob()] and [graphics::rasterImage()]
-#'   draw without conversion.
+#' @param palette A named character vector of colours answering CSS
+#'   `var(--name)` by `name` (without the `--`), e.g.
+#'   `c(primary = "#1e88e5")`. A name not present leaves the variable to its
+#'   fallback, as plutosvg does.
+#' @param as The form of the result:
+#'   * `"native"`, a `nativeRaster` that [grid::rasterGrob()] and
+#'     [graphics::rasterImage()] draw without conversion;
+#'   * `"array"`, a `height x width x 4` double array in `[0, 1]`, the shape
+#'     `rsvg::rsvg()` returns, which [as.raster()] and [png::writePNG()]
+#'     take;
+#'   * `"raw"`, RGBA bytes with `dim = c(4, width, height)`, the shape
+#'     `rsvg::rsvg_raw()` returns and `magick::image_read()` takes.
 #' @param max_pixels The most pixels the surface may have, at most
 #'   `2^29 - 1`, or `Inf` for that.
 #' @param quiet Reserved: will silence the warning for text that does not
 #'   render.
 #' @param ... Passed on to [svg_load()] when `x` is not already a document.
-#' @return For `as = "native"`, a `nativeRaster`: an integer matrix of
-#'   packed, non-premultiplied colours with `dim = c(height, width)`.
+#' @return The pixels, non-premultiplied, in the form `as` names. For
+#'   `as = "native"`, an integer matrix of class `nativeRaster` with
+#'   `dim = c(height, width)`.
 #' @export
 #' @examples
 #' r <- svg_render('<svg xmlns="http://www.w3.org/2000/svg" width="16"
@@ -36,20 +46,98 @@
 #' rasterImage(r, 0, 0, 1, 1)
 svg_render <- function(x, width = NULL, height = NULL, id = NULL, scale = 1,
                        background = "transparent", color = "black",
-                       palette = NULL, as = "native", max_pixels = 5e7,
-                       quiet = FALSE, ...) {
+                       palette = NULL, as = c("native", "array", "raw"),
+                       max_pixels = 5e7, quiet = FALSE, ...) {
   call <- sys.call()
-  if (!is.null(id)) zsg_invalid_argument("id", "`id` is not supported yet; it must be NULL.", call)
-  if (!is.null(palette)) zsg_invalid_argument("palette", "`palette` is not supported yet; it must be NULL.", call)
-  if (!identical(as, "native")) zsg_invalid_argument("as", '`as` must be "native".', call)
+  as <- zsg_arg_choice(as, c("native", "array", "raw"), "as", call)
+  zsg_arg_id(id, call)
+  pal <- zsg_arg_palette(palette, call)
   zsg_arg_flag(quiet, "quiet", call)
   max_pixels <- zsg_arg_limit(max_pixels, "max_pixels", zsg_max_pixels_cap, call)
   bg <- zsg_arg_colour(background, "background", call)
   fg <- zsg_arg_colour(color, "color", call)
   doc <- zsg_as_document(x, ..., call = call)
-  box <- c(0, 0, doc$width, doc$height)
+  box <- if (is.null(id)) c(0, 0, doc$width, doc$height) else zsg_extents(doc, id, call)
+  if (!(box[3] > 0 && box[4] > 0)) {
+    zsg_abort("zusvg_render_error", sprintf(
+      "element \"%s\" draws nothing, so it has no size to render at", id), call = call)
+  }
   size <- zsg_render_size(box, width, height, scale, max_pixels, call)
-  zsg_render_native(doc, size, box, bg, fg, call = call)
+  r <- zsg_render_native(doc, size, box, bg, fg, id = id, pal = pal, call = call)
+  switch(as,
+    native = r,
+    array = .Call(zusvg_native_to_array, r),
+    raw = .Call(zusvg_native_to_raw, r)
+  )
+}
+
+#' Extents of a document or element
+#'
+#' The bounding box of what the document, or one element, draws, in the
+#' document's user units, as plutosvg computes it. This is what
+#' [svg_render()] crops to when given `id`, and how an icon sheet is cut into
+#' icons.
+#'
+#' @inheritParams svg_size
+#' @param id The `id` of an element, or `NULL` for the whole document.
+#' @return A named double vector `c(x = , y = , width = , height = )`. An
+#'   element that draws nothing has zero width and height.
+#' @export
+#' @examples
+#' sheet <- '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20">
+#'   <circle id="a" cx="10" cy="10" r="8"/><rect id="b" x="24" y="4"
+#'   width="12" height="12"/></svg>'
+#' svg_extents(sheet)
+#' svg_extents(sheet, id = "b")
+svg_extents <- function(x, id = NULL, ...) {
+  call <- sys.call()
+  zsg_arg_id(id, call)
+  doc <- zsg_as_document(x, ..., call = call)
+  e <- zsg_extents(doc, id, call)
+  c(x = e[1], y = e[2], width = e[3], height = e[4])
+}
+
+zsg_extents <- function(doc, id, call) {
+  e <- .Call(zusvg_extents, doc$ptr, id)
+  if (is.null(e)) {
+    zsg_abort("zusvg_missing_element", sprintf("no element has id \"%s\"", id),
+              id = id, call = call)
+  }
+  if (is.character(e)) zsg_invalid_argument("x", "`x` is not a live document.", call)
+  e
+}
+
+zsg_arg_id <- function(id, call) {
+  if (!is.null(id) && (!is.character(id) || length(id) != 1L || is.na(id) || !nzchar(id))) {
+    zsg_invalid_argument("id", "`id` must be NULL or a single non-empty string.", call)
+  }
+  invisible(id)
+}
+
+zsg_arg_choice <- function(x, choices, arg, call) {
+  if (identical(x, choices)) return(choices[1])
+  if (!is.character(x) || length(x) != 1L || !(x %in% choices)) {
+    zsg_invalid_argument(arg, sprintf("`%s` must be one of %s.", arg,
+      paste0('"', choices, '"', collapse = ", ")), call)
+  }
+  x
+}
+
+# A palette as list(names, colours): names without "--", colours as a
+# 4 x n matrix in [0, 1] (design §6.3, D8).
+zsg_arg_palette <- function(palette, call) {
+  if (is.null(palette)) return(list(names = character(), colors = double()))
+  nm <- names(palette)
+  if (!is.character(palette) || is.null(nm) || anyNA(nm) || any(!nzchar(nm)) ||
+      anyNA(palette) || anyDuplicated(sub("^--", "", nm))) {
+    zsg_invalid_argument("palette", paste0(
+      "`palette` must be a character vector of colours with unique, ",
+      "non-empty names."), call)
+  }
+  cols <- vapply(seq_along(palette), function(i) {
+    zsg_arg_colour(palette[[i]], sprintf("palette[[\"%s\"]]", nm[i]), call)
+  }, double(4))
+  list(names = enc2utf8(sub("^--", "", nm)), colors = as.double(cols))
 }
 
 # The largest surface whose byte count fits plutovg's int arithmetic
@@ -119,7 +207,9 @@ zsg_arg_colour <- function(x, arg, call) {
   as.double(rgba) / 255
 }
 
-zsg_render_native <- function(doc, size, box, bg, fg, call, fail = 0L) {
+zsg_render_native <- function(doc, size, box, bg, fg, call, id = NULL,
+                              pal = list(names = character(), colors = double()),
+                              fail = 0L) {
   w <- size[1]
   h <- size[2]
   buf <- tryCatch(integer(w * h), error = function(e) {
@@ -128,6 +218,7 @@ zsg_render_native <- function(doc, size, box, bg, fg, call, fail = 0L) {
   })
   dim(buf) <- c(as.integer(h), as.integer(w))
   status <- .Call(zusvg_render_native, doc$ptr, buf, as.double(box), bg, fg,
+                  if (is.null(id)) NULL else enc2utf8(id), pal$names, pal$colors,
                   as.integer(fail))
   switch(status,
     ZSG_OK = NULL,

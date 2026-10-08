@@ -1,0 +1,57 @@
+Subject: Size a <use>d <symbol> or <svg> by the <use>'s width and height
+
+SVG 1.1 section 5.6: when a <use> references a <symbol> or an <svg>, the
+<use>'s width and height, where given, override the referenced element's.
+render_use() passed only x and y, so render_svg() sized the referenced
+element from its own width and height, 100% of the viewport by default.
+An icon sprite sheet's <use href="#icon" width="24" height="24"/> drew
+the icon viewport-sized.
+
+render_svg_sized() takes the <use> and lets its width and height win;
+render_svg() keeps its behaviour by passing none.
+
+zusvg: .agents/design.md §9, §18 Q10. Offered upstream.
+
+--- a/plutosvg/source/plutosvg.c
++++ b/plutosvg/source/plutosvg.c
+@@ -2160,7 +2160,7 @@
+     render_state_end(&new_state);
+ }
+ 
+-static void render_svg(const element_t* element, render_context_t* context, render_state_t* state)
++static void render_svg_sized(const element_t* element, const element_t* use, render_context_t* context, render_state_t* state)
+ {
+     if(element->parent == NULL) {
+         render_symbol(element, context, state, 0.f, 0.f, context->document->width, context->document->height);
+@@ -2177,6 +2177,10 @@
+     parse_length(element, ATTR_Y, &y, true, false);
+     parse_length(element, ATTR_WIDTH, &w, false, false);
+     parse_length(element, ATTR_HEIGHT, &h, false, false);
++    if(use) {
++        parse_length(use, ATTR_WIDTH, &w, false, false);
++        parse_length(use, ATTR_HEIGHT, &h, false, false);
++    }
+ 
+     float _x = resolve_length(state, &x, 'x');
+     float _y = resolve_length(state, &y, 'y');
+@@ -2185,6 +2189,11 @@
+     render_symbol(element, context, state, _x, _y, _w, _h);
+ }
+ 
++static void render_svg(const element_t* element, render_context_t* context, render_state_t* state)
++{
++    render_svg_sized(element, NULL, context, state);
++}
++
+ #define MAX_RENDER_DEPTH 256
+ 
+ static void render_use(const element_t* element, render_context_t* context, render_state_t* state)
+@@ -2211,7 +2220,7 @@
+     ref->parent = (element_t*)(element);
+     context->depth++;
+     if(ref->id == TAG_SVG || ref->id == TAG_SYMBOL) {
+-        render_svg(ref, context, &new_state);
++        render_svg_sized(ref, element, context, &new_state);
+     } else {
+         render_element(ref, context, &new_state);
+     }
