@@ -2,7 +2,7 @@
 
 Companion to [design.md](design.md). Section references (§) point there.
 
-**Status:** adopted 2026-10-08 from [RFC 0007](https://github.com/pedrobtz/packages/blob/main/rfcs/0007-zusvg-svg-rasteriser.md). Nothing below is implemented; the repository is the `usethis` skeleton (created 2026-10-08 with `dotfiles/create-pkg.sh -c`) plus these documents.
+**Status:** adopted 2026-10-08 from [RFC 0007](https://github.com/pedrobtz/packages/blob/main/rfcs/0007-zusvg-svg-rasteriser.md). Stages 0–6 and Stage 7's preparation were implemented and merged on 2026-10-08 (#11, #15–#21); the CRAN submission waits for zufast.
 
 ## Sequencing principles
 
