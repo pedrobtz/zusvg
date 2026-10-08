@@ -52,6 +52,8 @@ PLUTOSVG_OBJECTS = \
 
 OBJECTS = \
 	init.o \
+	zsg_doc.o \
 	zsg_info.o \
+	zsg_scan.o \
 	$(PLUTOVG_OBJECTS) \
 	$(PLUTOSVG_OBJECTS)

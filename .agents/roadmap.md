@@ -22,7 +22,7 @@ Sizes are relative: **S** ≈ a sitting, **M** ≈ a few, **L** ≈ the stage is
 
 ## The release order, and what it costs
 
-`LinkingTo: zufast (>= 0.1.0)` is unconditional (the pre-scan's UTF-8 check), so **zufast must be on CRAN before zusvg can be submitted** (alignment R10.5, release order). On 2026-10-08 zufast's `DESCRIPTION` says 0.1.0, but it has no tag, is not submitted, and is not on CRAN. `Remotes: pedrobtz/zufast@main` carries development (R10.2), and Stage 7 removes it. `zukomp` was submitted on 2026-10-06 and is not yet accepted. It enters `LinkingTo` and `Imports` at Stage 6 only if it is on CRAN by then; otherwise `.svgz` and the better PNG compression wait for 0.1.1, and Stage 6 says so in `zusvg_info()`.
+`LinkingTo: zufast (>= 0.1.0)` is unconditional (the pre-scan's UTF-8 check), so **zufast must be on CRAN before zusvg can be submitted** (alignment R10.5, release order). On 2026-10-08 zufast's `DESCRIPTION` says 0.1.0, but it has no tag, is not submitted, and is not on CRAN. `Remotes: pedrobtz/zufast@main` carries development (R10.2), and Stage 7 removes it. `zukomp` was submitted on 2026-10-06 and is not yet accepted. It enters `LinkingTo` and `Imports` at Stage 6, for PNG compression only, if it is on CRAN by then; otherwise the better PNG compression waits for 0.1.1, and Stage 6 says so in `zusvg_info()`. `.svgz` needs no zukomp (design D16).
 
 Nothing waits on zusvg.
 
@@ -66,7 +66,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 | 3 — `"array"`, `"raw"`, `id`, extents, colours, palette | M | 2 | the rest of the render surface |
 | 4 — PNG, JPEG, `svg_elements()`, text warning | S | 3 | `svg_png()`, `svg_jpeg()`, `svg_elements()`, `zusvg_text_skipped` |
 | 5 — Fuzz target, mutation check, hardening CI | M | 4 | `fuzz_svg`, `fuzz_canary`, `hardening.yaml`; §18 Q2 decided |
-| 6 — `.svgz`, zukomp compression, conformance, benchmarks | M | 5 | `conformance.yaml`; `zukomp` in `LinkingTo` and `Imports` if on CRAN; benchmarks recorded |
+| 6 — zukomp compression, conformance, benchmarks | M | 5 | `conformance.yaml`; `zukomp` in `LinkingTo` and `Imports` if on CRAN; benchmarks recorded |
 | 7 — Site, vignette, CRAN | S | 6, and zufast on CRAN | the submission |
 
 ---
@@ -137,7 +137,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 1 — `svg_load()`, `svg_read()`, `svg_size()`, errors, limits, pre-scan · M
 
-**Status:** not started.
+**Status:** in review.
 
 **Do**
 
@@ -151,6 +151,16 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 **Exit**
 
 - Every §11 class reachable without a render has a test; `native-checks.yaml` green; `svg_size()` matches plutosvg's resolution rules on inline documents with `width`/`height`, `viewBox` only, and neither (the fixture corpus arrives in Stage 2).
+
+**What actually happened**
+
+- **The pre-scan is a line-for-line port of the loader's tokenizer** (`src/zsg_scan.c`), not a separate approximation. In a local run of 20 000 random tag soups, every document the pre-scan passed and the loader refused was a zero-size root. That is the only refusal left to the loader, and it carries `offset = NA`.
+- **gzip needs no zukomp** (design D16). R's `file()` and `gzcon()` decompress, under the same bounded read, so `max_size` caps the decompressed size. `zusvg_unsupported_input` is gone, and Stage 6 keeps only PNG compression.
+- **Encoding.** A NUL byte is refused as `zusvg_encoding_error` with its offset: plutosvg would accept it, but R strings cannot hold one, and XML forbids it. Invalid UTF-8 has `offset = NA`, since `zuf_utf8_valid()` reports no position.
+- **The element list** (id, tag, text in subtree, for the elements plutosvg builds) is recorded by the pre-scan at load and kept on the R object for `svg_elements()` (Stage 4).
+- **`max_size` is capped at `2^31 - 1`**, because plutosvg takes the length as an `int`.
+- **Not covered here:** `zusvg_memory_error` and `zusvg_render_error` (Stage 2) and `zusvg_missing_element` (Stage 3).
+- The `.Call` glue lives in `zsg_doc.c`; the planned `zsg_r.c` was not needed.
 
 ---
 
@@ -226,7 +236,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ---
 
-## Stage 6 — `.svgz` and zukomp compression; conformance and benchmarks · M
+## Stage 6 — zukomp compression; conformance and benchmarks · M
 
 **Status:** not started.
 
@@ -234,10 +244,9 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 - If `zukomp` is on CRAN:
   - Add `LinkingTo: zukomp` and `Imports: zukomp`.
-  - Read `.svgz` files and gzip-magic raw vectors through `komp_decompress(max_output = max_size)`.
   - Compress PNG through stb's `STBIW_ZLIB_COMPRESS` hook, using zukomp's `zlib` codec (a zlib stream, not raw deflate). Call it through zukomp's C API (`zukomp-r.h`, `R_GetCCallable()`) with a callable that returns a status and never raises an R error. Its buffer comes from `malloc()`, because stb frees it with `free()`.
   - Add the hook's prototype as a one-line D4 patch (design §7).
-  - Keep the output byte-identical across platforms. If not: `zusvg_info()` says `.svgz` is unsupported in this version and the item moves to *After 0.1.0*.
+  - Keep the output byte-identical across platforms. If zukomp is not on CRAN, `zusvg_info()` says PNG compression is `stb_image_write`'s, and the item moves to *After 0.1.0*.
 - `conformance.yaml`: render hashes compared across Linux, macOS and Windows runners (x86-64 and arm64); the `rsvg` cross-check with its tolerance; `tools/run-benchmarks` against `rsvg` and `magick`, results recorded in design §16.
 
 **Exit**
@@ -292,12 +301,12 @@ Text · filters, masks, patterns, markers, CSS sheets · applying clip paths (de
 | renders differ across platforms, including FMA contraction on arm64 | 2, 6 | hashes checked from the first render; §18 Q9; CRAN tests use a tolerance (D14) |
 | `<use>` fan-out takes exponential time | 5 | §18 Q2's step counter; known slow inputs in the corpus |
 | `stb_image` CVE class in embedded images | all | `STBI_NO_*`; `images = FALSE`; the fuzz corpus includes images; `vendor-upstream.yaml` flags new tags |
-| zukomp not on CRAN by Stage 6 | 6 | `.svgz` deferred, stated in `zusvg_info()` |
+| zukomp not on CRAN by Stage 6 | 6 | PNG keeps stb's deflate, stated in `zusvg_info()`; `.svgz` is unaffected (D16) |
 | the audience needs text (§18 Q6) | 0 | the survey before any render code |
 
 ## After 0.1.0
 
-1. `.svgz` and zukomp compression for PNG if they missed Stage 6.
+1. zukomp compression for PNG if it missed Stage 6.
 2. The patch that applies clip paths (design D15), offered upstream.
 3. A parsed-tree accessor over `zuxml` (§18 Q3) and SVG-to-PDF through `zupdf` (§18 Q4), each when asked.
 4. The next plutosvg or plutovg release, through `tools/update-plutosvg`, dropping any patch upstream accepted.

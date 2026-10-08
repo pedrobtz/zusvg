@@ -85,9 +85,9 @@ R/            load.R, read.R, validate.R, size.R, render.R, output.R (png, jpeg)
               zusvg-package.R
 src/          init.c                          registration only
               zsg_scan.h, zsg_scan.c          pre-scan: R-free; UTF-8, counts, limits, <text>/<image>
-              zsg_doc.c                       document external pointer over plutosvg_document_t
+              zsg_doc.h, zsg_doc.c            document external pointer over plutosvg_document_t;
+                                              zusvg_load() and its .Call siblings
               zsg_render.c                    surface, canvas, palette callback, ARGB -> ABGR/RGBA
-              zsg_r.c                         .Call glue; statuses by name
               zsg_info.c, zusvg.h             zusvg_info() and its self-test render
               zsg_vendor.h                    pinned tags, commits, patch ids; written by tools/update-plutosvg
               Makevars                        hand-listed objects (12 vendored + project); *_BUILD_STATIC; stb flags; -lm
@@ -100,7 +100,7 @@ inst/COPYRIGHTS, LICENSE.note
 .agents/      design.md, roadmap.md
 ```
 
-The pipeline is: read and decode the input in R → **pre-scan** (`zsg_scan.c`, pure C, R-free: UTF-8, element and depth counts, `<image`/`<text` detection, the limits; refuses with an offset before plutosvg sees a byte) → **document** (`plutosvg_document_load_from_data()` over a copy of the bytes owned by a finalized external pointer) → **render** (`plutovg_surface_t` and canvas in a second external pointer; `plutosvg_document_render()` with `current_color` and the palette callback; conversion to the requested R object) → R value or encoded bytes. Only `zsg_doc.c` and `zsg_render.c` include plutosvg or plutovg headers.
+The pipeline is: read and decode the input in R → **pre-scan** (`zsg_scan.c`, pure C, R-free: UTF-8, element and depth counts, `<image`/`<text` detection, the limits; refuses with an offset before plutosvg sees a byte) → **document** (`plutosvg_document_load_from_data()` over a copy of the bytes owned by a finalized external pointer) → **render** (`plutovg_surface_t` and canvas in a second external pointer; `plutosvg_document_render()` with `current_color` and the palette callback; conversion to the requested R object) → R value or encoded bytes. Only `zsg_doc.c`, `zsg_render.c` and `zsg_info.c` include plutosvg or plutovg headers.
 
 ## Invariants that are easy to break
 
