@@ -51,7 +51,7 @@ background, and returns the pixels."></head><body>
 <span>  background <span class="op">=</span> <span class="st">"transparent"</span>,</span>
 <span>  color <span class="op">=</span> <span class="st">"black"</span>,</span>
 <span>  palette <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  as <span class="op">=</span> <span class="st">"native"</span>,</span>
+<span>  as <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"native"</span>, <span class="st">"array"</span>, <span class="st">"raw"</span><span class="op">)</span>,</span>
 <span>  max_pixels <span class="op">=</span> <span class="fl">5e+07</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -72,7 +72,8 @@ background, and returns the pixels."></head><body>
 
 
 <dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
-<dd><p>Not yet supported: must be <code>NULL</code>.</p></dd>
+<dd><p>The <code>id</code> of one element to render alone, cropped to its
+extents (<code><a href="svg_extents.html">svg_extents()</a></code>); <code>NULL</code> renders the whole document.</p></dd>
 
 
 <dt id="arg-scale">scale<a class="anchor" aria-label="anchor" href="#arg-scale"></a></dt>
@@ -90,13 +91,21 @@ anything <code><a href="https://rdrr.io/r/grDevices/col2rgb.html" class="externa
 
 
 <dt id="arg-palette">palette<a class="anchor" aria-label="anchor" href="#arg-palette"></a></dt>
-<dd><p>Not yet supported: must be <code>NULL</code>.</p></dd>
+<dd><p>A named character vector of colours answering CSS
+<code>var(--name)</code> by <code>name</code> (without the <code>--</code>), e.g.
+<code>c(primary = "#1e88e5")</code>. A name not present leaves the variable to its
+fallback, as plutosvg does.</p></dd>
 
 
 <dt id="arg-as">as<a class="anchor" aria-label="anchor" href="#arg-as"></a></dt>
-<dd><p>The form of the result: only <code>"native"</code> so far, a
-<code>nativeRaster</code> that <code><a href="https://rdrr.io/r/grid/grid.raster.html" class="external-link">grid::rasterGrob()</a></code> and <code><a href="https://rdrr.io/r/graphics/rasterImage.html" class="external-link">graphics::rasterImage()</a></code>
-draw without conversion.</p></dd>
+<dd><p>The form of the result:</p><ul><li><p><code>"native"</code>, a <code>nativeRaster</code> that <code><a href="https://rdrr.io/r/grid/grid.raster.html" class="external-link">grid::rasterGrob()</a></code> and
+<code><a href="https://rdrr.io/r/graphics/rasterImage.html" class="external-link">graphics::rasterImage()</a></code> draw without conversion;</p></li>
+<li><p><code>"array"</code>, a <code>height x width x 4</code> double array in <code>[0, 1]</code>, the shape
+rsvg's <code>rsvg()</code> returns, which <code><a href="https://rdrr.io/r/grDevices/as.raster.html" class="external-link">as.raster()</a></code> and <code><a href="https://rdrr.io/pkg/png/man/writePNG.html" class="external-link">png::writePNG()</a></code>
+take;</p></li>
+<li><p><code>"raw"</code>, RGBA bytes with <code>dim = c(4, width, height)</code>, the shape
+rsvg's <code>rsvg_raw()</code> returns and magick's <code>image_read()</code> takes.</p></li>
+</ul></dd>
 
 
 <dt id="arg-max-pixels">max_pixels<a class="anchor" aria-label="anchor" href="#arg-max-pixels"></a></dt>
@@ -115,15 +124,16 @@ render.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>For <code>as = "native"</code>, a <code>nativeRaster</code>: an integer matrix of
-packed, non-premultiplied colours with <code>dim = c(height, width)</code>.</p>
+    <p>The pixels, non-premultiplied, in the form <code>as</code> names. For
+<code>as = "native"</code>, an integer matrix of class <code>nativeRaster</code> with
+<code>dim = c(height, width)</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The surface size: with neither <code>width</code> nor <code>height</code>, the document's size
 (<code><a href="svg_size.html">svg_size()</a></code>) times <code>scale</code>, rounded up; with one, the other follows the
 document's aspect ratio; with both, the document is stretched to fill
-them, as <code><a href="https://docs.ropensci.org/rsvg/reference/rsvg.html" class="external-link">rsvg::rsvg()</a></code> does.</p>
+them, as the rsvg package's <code>rsvg()</code> does.</p>
     </div>
 
     <div class="section level2">

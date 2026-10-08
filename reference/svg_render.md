@@ -15,7 +15,7 @@ svg_render(
   background = "transparent",
   color = "black",
   palette = NULL,
-  as = "native",
+  as = c("native", "array", "raw"),
   max_pixels = 5e+07,
   quiet = FALSE,
   ...
@@ -40,7 +40,9 @@ svg_render(
 
 - id:
 
-  Not yet supported: must be `NULL`.
+  The `id` of one element to render alone, cropped to its extents
+  ([`svg_extents()`](https://pedrobtz.github.io/zusvg/reference/svg_extents.md));
+  `NULL` renders the whole document.
 
 - scale:
 
@@ -59,14 +61,26 @@ svg_render(
 
 - palette:
 
-  Not yet supported: must be `NULL`.
+  A named character vector of colours answering CSS `var(--name)` by
+  `name` (without the `--`), e.g. `c(primary = "#1e88e5")`. A name not
+  present leaves the variable to its fallback, as plutosvg does.
 
 - as:
 
-  The form of the result: only `"native"` so far, a `nativeRaster` that
-  [`grid::rasterGrob()`](https://rdrr.io/r/grid/grid.raster.html) and
-  [`graphics::rasterImage()`](https://rdrr.io/r/graphics/rasterImage.html)
-  draw without conversion.
+  The form of the result:
+
+  - `"native"`, a `nativeRaster` that
+    [`grid::rasterGrob()`](https://rdrr.io/r/grid/grid.raster.html) and
+    [`graphics::rasterImage()`](https://rdrr.io/r/graphics/rasterImage.html)
+    draw without conversion;
+
+  - `"array"`, a `height x width x 4` double array in `[0, 1]`, the
+    shape rsvg's `rsvg()` returns, which
+    [`as.raster()`](https://rdrr.io/r/grDevices/as.raster.html) and
+    [`png::writePNG()`](https://rdrr.io/pkg/png/man/writePNG.html) take;
+
+  - `"raw"`, RGBA bytes with `dim = c(4, width, height)`, the shape
+    rsvg's `rsvg_raw()` returns and magick's `image_read()` takes.
 
 - max_pixels:
 
@@ -85,17 +99,17 @@ svg_render(
 
 ## Value
 
-For `as = "native"`, a `nativeRaster`: an integer matrix of packed,
-non-premultiplied colours with `dim = c(height, width)`.
+The pixels, non-premultiplied, in the form `as` names. For
+`as = "native"`, an integer matrix of class `nativeRaster` with
+`dim = c(height, width)`.
 
 ## Details
 
 The surface size: with neither `width` nor `height`, the document's size
 ([`svg_size()`](https://pedrobtz.github.io/zusvg/reference/svg_size.md))
 times `scale`, rounded up; with one, the other follows the document's
-aspect ratio; with both, the document is stretched to fill them, as
-[`rsvg::rsvg()`](https://docs.ropensci.org/rsvg/reference/rsvg.html)
-does.
+aspect ratio; with both, the document is stretched to fill them, as the
+rsvg package's `rsvg()` does.
 
 ## Examples
 
