@@ -204,7 +204,7 @@ Facts read from the source that shape the design:
   D4's depth patch is therefore required. It counts `<use>` hops against the same depth as `render_children()`.
 - **Images.** `<image href>` resolves only base64 `data:image/png`, `data:image/jpg` and `data:image/jpeg` URIs (`plutosvg.c:2460-2467`), decoded by plutovg's vendored `stb_image` 2.30 (`STBI_rgb_alpha`), whose JPEG and PNG decoders have a history of CVEs. zusvg compiles with `-DSTBI_NO_BMP -DSTBI_NO_PSD -DSTBI_NO_TGA -DSTBI_NO_GIF -DSTBI_NO_HDR -DSTBI_NO_PIC -DSTBI_NO_PNM`, which `stb_image` honours from the compiler line without editing the file (each is `#ifdef`-tested). `images = FALSE` makes the pre-scan refuse any `<image` element before decoding. `STBI_NO_STDIO` and `STBI_WRITE_NO_STDIO` must not be set, because `plutovg-surface.c` calls the stdio entry points and would not compile. `STBI_NO_THREAD_LOCALS` is set. Under emulated thread-local storage (GCC on macOS, MinGW on Windows), stb_image's thread-local failure reason links libgcc's `__emutls_*` helpers, which reference `abort()` and are exported from the shared object (*found at Stage 0*). The fuzz corpus includes embedded images.
 - **Surfaces.** `plutovg_surface_create()` refuses a dimension at or above 32768 (`kMaxSize = 1 << 15`) and returns `NULL` on `malloc()` failure, which zusvg reports as `zusvg_memory_error`. It has no overflow check on `height * stride` (*read 2026-10-08*, correcting the RFC's reading of the 1.3.3 notes); §6.1 says how zusvg keeps sizes inside it.
-- **`<use>` of a `<symbol>` ignores the `<use>`'s size** (*found at Stage 2*). `render_use()` passes only `x` and `y`. `render_svg()` then sizes a `<symbol>` from the symbol's own `width` and `height`, which default to 100% of the viewport, never from the `<use>`. An icon sprite sheet's `<use href="#icon" width="24" height="24"/>` therefore draws the icon viewport-sized. The `use-symbol` fixture pins it; §18 Q10.
+- **`<use>` of a `<symbol>` ignored the `<use>`'s size** (*found at Stage 2*; patch `0008` fixes it, D17). `render_use()` passes only `x` and `y`. `render_svg()` then sizes a `<symbol>` from the symbol's own `width` and `height`, which default to 100% of the viewport, never from the `<use>`. An icon sprite sheet's `<use href="#icon" width="24" height="24"/>` therefore draws the icon viewport-sized. The `use-symbol` fixture pins it; §18 Q10.
 - **Clip paths.** `TAG_CLIP_PATH` carries a `TODO`, and nothing in the renderer reads `clip-path` (*read 2026-10-08*). §2 and D15.
 - **Fonts.** plutovg's `plutovg-font.c` carries `stb_truetype`, a font face cache, a mutex and a system font directory scan. The file cannot be left out, because `plutovg-canvas.c` calls into it. plutosvg never calls any font function. The mutex is a `CRITICAL_SECTION` under `_WIN32` (with `windows.h`), C11 `mtx_t` under `HAVE_THREADS_H`, and a no-op otherwise. zusvg does not define `HAVE_THREADS_H`, and it defines `PLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD`, which compiles out the directory scan and its `mmap()` and `dirent` use, so nothing reads the file system. The symbols are hidden with the rest.
 - **Standard and libraries.** plutosvg builds as C99 and plutovg as C11 (`gnu11` in its Meson file); both need `-lm` and nothing else. R's default C standard is C17 or later, so `src/Makevars` sets nothing.
@@ -289,7 +289,7 @@ The document's bytes and its plutosvg object live in one external pointer; the s
 - Compiler warnings from the vendored trees under `-Wall -Wextra -pedantic` are recorded in Stage 0 (`src/vendor/PROVENANCE`; under CRAN's `-Wall -pedantic`, clang and GCC now print none); any that CRAN's own flags would print are fixed by a recorded patch (D4), not by silencing, and never by a diagnostic-suppressing pragma, which draws its own NOTE.
 - No system dependency: `SystemRequirements` is empty, which is the package's reason to exist.
 - `LinkingTo: zufast (>= 0.1.0)`, with `Remotes: pedrobtz/zufast@main` during development only (R10.2). CRAN order (R10.5): after `zufast`, which on 2026-10-08 carries `Version: 0.1.0` but no tag and is not yet submitted. `zukomp` (submitted 2026-10-06, not yet accepted) must be on CRAN before Stage 6 adds it to `LinkingTo` and `Imports`. If it is not by then, PNG keeps `stb_image_write`'s deflate for 0.1.0.
-- `Imports: grDevices` (`col2rgb()`, from Stage 2); `Suggests` names every package a test, example or vignette uses (`rsvg`, `png`, `jpeg`, `grid`, `ggplot2`, `testthat`, `withr`, `knitr`, `rmarkdown`).
+- `Imports: grDevices` (`col2rgb()`, from Stage 2); `Suggests` names every package a test, example or vignette uses (`png`, `jpeg`, `grid`, `ggplot2`, `testthat`, `withr`, `knitr`, `rmarkdown`).
 - Licence MIT with the vendored notices (§9); `Language: en-GB`; `.Rbuildignore` covers `.agents/`, `.claude/`, `tools/`, `fuzz/`.
 
 ---
@@ -297,7 +297,7 @@ The document's bytes and its plutosvg object live in one external pointer; the s
 ## 15. Testing
 
 - **Fixtures.** `tests/testthat/fixtures/` holds a project corpus of SVGs with pinned rendered hashes: each element type, each `preserveAspectRatio` value, gradients with each spread method and both unit systems, clip paths (pinning the warning, and the unclipped pixels until D15's patch), `use` of symbols and of elements, a long `<use>` chain (pinning D4's depth patch), nested svg, `currentColor` and `var()`, embedded PNG and JPEG, text (to pin the warning), `.svgz`, and the `resvg` test suite's `structure` and `painting` subsets that use only supported features (CC0, pulled by `tools/update-fixtures`, never by hand; `tests/testthat/fixtures/README.md` lists sources and licences).
-- **Cross-check.** Where `rsvg` is installed, each supported fixture renders through both and the mean absolute channel difference is bounded (anti-aliasing and un-premultiply rounding differ; shapes must not); Stage 3 sets the bound from the fixtures and records it here. Fixtures whose clip changes pixels are excluded until D15's patch lands. This runs in the `conformance` job only, since `rsvg` is a `Suggests` that CRAN need not have.
+- **Cross-check.** Where `rsvg` is installed, each supported fixture renders through both and the mean absolute channel difference is bounded (anti-aliasing and un-premultiply rounding differ; shapes must not); Stage 3 sets the bound from the fixtures and records it here. Fixtures whose clip changes pixels are excluded until D15's patch lands. This runs in the `conformance` job only, which installs `rsvg`: no test calls it, so it is not a dependency, and valgrind finds leaks inside librsvg (Stage 3).
 - **Shape tests.** Each `as` value's class, dim and a few pinned pixels; `rasterGrob()` and `rasterImage()` draw the native output in a `png()` device, and the test reads the file back with `png::readPNG()` and compares pixels within a tolerance, since the device's bytes depend on its platform backend.
 - **Pinned hashes on CRAN.** Exact render hashes are compared under `skip_on_cran()` and in the conformance job; the tests CRAN runs compare pinned pixels within one level per channel, so an FMA difference on a CRAN machine (§8) cannot fail the check.
 - **Limits and faults.** Every class of §11 with a crafted input, the pre-scan's offsets, the loader's `NA` offset, each limit at its boundary.
@@ -338,6 +338,7 @@ Measured by `tools/run-benchmarks` against `rsvg` and `magick` where installed, 
 | D14 | Exact hashes | checked in CI's conformance job and under `skip_on_cran()`; CRAN's tests use a one-level pixel tolerance (§15) |
 | D15 | Clip paths | for 0.1.0, a `zusvg_clip_skipped` warning when a document references a clip path that is not a full-canvas rectangle, with `has_clip` in `svg_elements()`; a patch applying `clip-path`, offered upstream, after 0.1.0 (§3's survey; §18 Q8) |
 | D16 | gzip input | decompressed with base R (`file()`, `gzfile()`) under the bounded read; no zukomp, and no `zusvg_unsupported_input` class (§10) |
+| D17 | `<use>` of a `<symbol>` or `<svg>` | sized by the `<use>`'s `width` and `height` where given (SVG 1.1 §5.6), through patch `0008-use-symbol-size`, offered upstream (§9) |
 
 Reasons where they are not in the section cited:
 
@@ -352,6 +353,7 @@ Reasons where they are not in the section cited:
   - `0005-stbiw-snprintf`: the HDR writer's `sprintf()` (§9).
   - `0006-stbtt-no-pragmas`: the diagnostic-suppressing pragmas (§14).
   - `0007-bsearch-const`: in C23, `bsearch()` on a `const` table returns `const void *`, and the non-const result in `lookupid()` was a qualifier-discarding warning under R-devel's clang (found by the `clang23` CI leg).
+  - `0008-use-symbol-size` (Stage 3): a `<use>`'s `width` and `height` size the `<symbol>` or `<svg>` it references (D17).
 
   Expected later:
   - from Stage 6, the one-line `STBIW_ZLIB_COMPRESS` prototype (§7);
@@ -381,7 +383,7 @@ Each stays the maintainer's until recorded above; the recommendation is the RFC'
 
    Recommended: measure first. If they differ, (a) for clang and (b) for GCC.
 
-10. **`<use>` width and height on a `<symbol>`** (*from Stage 2*; §9). A patch in which `render_use()` hands the `<use>`'s `width` and `height` to a referenced `<symbol>`, as SVG 1.1 §5.6 specifies, is small and is what icon sprite sheets need. Recommended: add it in Stage 3 alongside `id` rendering, offered upstream, re-pinning the `use-symbol` fixture.
+10. **`<use>` width and height on a `<symbol>`.** *Decided at Stage 3*: patch `0008-use-symbol-size` (D17).
 
 ---
 

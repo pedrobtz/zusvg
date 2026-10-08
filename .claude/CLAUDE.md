@@ -163,7 +163,7 @@ The pipeline is: read and decode the input in R → **pre-scan** (`zsg_scan.c`, 
 - Prose is simple, short and en-GB (`Language: en-GB`, `inst/WORDLIST`). The package help page's first paragraph names what zusvg does not render (D10); keep it there.
 - Wrap roxygen at 80 characters; `air format .` on R sources.
 - `lower_snake_case`; the naming table above.
-- Hard runtime dependencies: none until Stage 6 adds `zukomp` by recorded decision. `grDevices` is in `Imports` for `col2rgb()`; `rsvg`, `png`, `jpeg`, `grid`, `ggplot2` stay in `Suggests`.
+- Hard runtime dependencies: none until Stage 6 adds `zukomp` by recorded decision. `grDevices` is in `Imports` for `col2rgb()`; `png`, `jpeg`, `grid`, `ggplot2` stay in `Suggests`.
 - Every export has `@return` and runnable `@examples`; no roxygen topics for internals.
 - `R/zu_source.R` is copied verbatim from `../zuxml`; fix it there and re-copy. The bounded read comes from zucbor's `zu_read_bounded()` (`../zucbor/R/read.R`), since zuxml's `zu_read_all()` has no limit.
 - `NEWS.md` keeps a versioned heading.

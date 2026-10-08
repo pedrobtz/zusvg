@@ -13,7 +13,7 @@ svg_render(
   background = "transparent",
   color = "black",
   palette = NULL,
-  as = "native",
+  as = c("native", "array", "raw"),
   max_pixels = 5e+07,
   quiet = FALSE,
   ...
@@ -25,7 +25,8 @@ svg_render(
 
 \item{width, height}{The surface size in pixels; see Details.}
 
-\item{id}{Not yet supported: must be \code{NULL}.}
+\item{id}{The \code{id} of one element to render alone, cropped to its
+extents (\code{\link[=svg_extents]{svg_extents()}}); \code{NULL} renders the whole document.}
 
 \item{scale}{The factor applied to the document's size when neither
 \code{width} nor \code{height} is given.}
@@ -35,11 +36,21 @@ anything \code{\link[grDevices:col2rgb]{grDevices::col2rgb()}} takes, including 
 
 \item{color}{The colour CSS \code{currentColor} resolves to.}
 
-\item{palette}{Not yet supported: must be \code{NULL}.}
+\item{palette}{A named character vector of colours answering CSS
+\code{var(--name)} by \code{name} (without the \verb{--}), e.g.
+\code{c(primary = "#1e88e5")}. A name not present leaves the variable to its
+fallback, as plutosvg does.}
 
-\item{as}{The form of the result: only \code{"native"} so far, a
-\code{nativeRaster} that \code{\link[grid:rasterGrob]{grid::rasterGrob()}} and \code{\link[graphics:rasterImage]{graphics::rasterImage()}}
-draw without conversion.}
+\item{as}{The form of the result:
+\itemize{
+\item \code{"native"}, a \code{nativeRaster} that \code{\link[grid:rasterGrob]{grid::rasterGrob()}} and
+\code{\link[graphics:rasterImage]{graphics::rasterImage()}} draw without conversion;
+\item \code{"array"}, a \verb{height x width x 4} double array in \verb{[0, 1]}, the shape
+rsvg's \code{rsvg()} returns, which \code{\link[=as.raster]{as.raster()}} and \code{\link[png:writePNG]{png::writePNG()}}
+take;
+\item \code{"raw"}, RGBA bytes with \code{dim = c(4, width, height)}, the shape
+rsvg's \code{rsvg_raw()} returns and magick's \code{image_read()} takes.
+}}
 
 \item{max_pixels}{The most pixels the surface may have, at most
 \code{2^29 - 1}, or \code{Inf} for that.}
@@ -50,8 +61,9 @@ render.}
 \item{...}{Passed on to \code{\link[=svg_load]{svg_load()}} when \code{x} is not already a document.}
 }
 \value{
-For \code{as = "native"}, a \code{nativeRaster}: an integer matrix of
-packed, non-premultiplied colours with \code{dim = c(height, width)}.
+The pixels, non-premultiplied, in the form \code{as} names. For
+\code{as = "native"}, an integer matrix of class \code{nativeRaster} with
+\code{dim = c(height, width)}.
 }
 \description{
 Draws the document onto a surface of the requested size, cleared to
@@ -61,7 +73,7 @@ Draws the document onto a surface of the requested size, cleared to
 The surface size: with neither \code{width} nor \code{height}, the document's size
 (\code{\link[=svg_size]{svg_size()}}) times \code{scale}, rounded up; with one, the other follows the
 document's aspect ratio; with both, the document is stretched to fill
-them, as \code{rsvg::rsvg()} does.
+them, as the rsvg package's \code{rsvg()} does.
 }
 \examples{
 r <- svg_render('<svg xmlns="http://www.w3.org/2000/svg" width="16"

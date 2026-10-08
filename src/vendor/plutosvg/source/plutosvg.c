@@ -2160,7 +2160,7 @@ static void render_symbol(const element_t* element, render_context_t* context, r
     render_state_end(&new_state);
 }
 
-static void render_svg(const element_t* element, render_context_t* context, render_state_t* state)
+static void render_svg_sized(const element_t* element, const element_t* use, render_context_t* context, render_state_t* state)
 {
     if(element->parent == NULL) {
         render_symbol(element, context, state, 0.f, 0.f, context->document->width, context->document->height);
@@ -2177,12 +2177,21 @@ static void render_svg(const element_t* element, render_context_t* context, rend
     parse_length(element, ATTR_Y, &y, true, false);
     parse_length(element, ATTR_WIDTH, &w, false, false);
     parse_length(element, ATTR_HEIGHT, &h, false, false);
+    if(use) {
+        parse_length(use, ATTR_WIDTH, &w, false, false);
+        parse_length(use, ATTR_HEIGHT, &h, false, false);
+    }
 
     float _x = resolve_length(state, &x, 'x');
     float _y = resolve_length(state, &y, 'y');
     float _w = resolve_length(state, &w, 'x');
     float _h = resolve_length(state, &h, 'y');
     render_symbol(element, context, state, _x, _y, _w, _h);
+}
+
+static void render_svg(const element_t* element, render_context_t* context, render_state_t* state)
+{
+    render_svg_sized(element, NULL, context, state);
 }
 
 #define MAX_RENDER_DEPTH 256
@@ -2211,7 +2220,7 @@ static void render_use(const element_t* element, render_context_t* context, rend
     ref->parent = (element_t*)(element);
     context->depth++;
     if(ref->id == TAG_SVG || ref->id == TAG_SYMBOL) {
-        render_svg(ref, context, &new_state);
+        render_svg_sized(ref, element, context, &new_state);
     } else {
         render_element(ref, context, &new_state);
     }
