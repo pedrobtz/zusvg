@@ -245,6 +245,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 - **R judges whether a clip is a no-op.** It must hold one untransformed `<rect>` covering the root's `viewBox` (or `0 0 1 1` under `objectBoundingBox`). The lifecycle-badge clip from the survey is a no-op and does not warn.
 - **Warnings are counted for what is rendered.** With `id`, only that element's subtree counts. `count` is a field, and both classes inherit `zusvg_warning`.
 - **PNG bytes are pinned** in `test-encode.R` under `skip_on_cran()`.
+- **The first CI run's UBSan** found a signed left-shift overflow in stb_image_write's JPEG bit writer on every JPEG encoded. Patch `0014` does the arithmetic unsigned; the bytes are unchanged.
 
 ---
 

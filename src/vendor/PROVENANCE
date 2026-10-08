@@ -29,6 +29,7 @@ plutovg
                  0006-stbtt-no-pragmas.patch
                  0007-bsearch-const.patch
                  0008-use-symbol-size.patch
+                 0014-stbiw-jpg-unsigned-bits.patch
 
 src/vendor/plutosvg/ and src/vendor/plutovg/ are the files listed in
 tools/plutosvg-files.txt and tools/plutovg-files.txt, copied from the
