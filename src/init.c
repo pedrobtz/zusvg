@@ -4,7 +4,10 @@
 #include "zusvg.h"
 
 static const R_CallMethodDef CallEntries[] = {
-    {"zusvg_build_info", (DL_FUNC) &zusvg_build_info, 0},
+    {"zusvg_build_info",   (DL_FUNC) &zusvg_build_info,   0},
+    {"zusvg_load",         (DL_FUNC) &zusvg_load,         5},
+    {"zusvg_status_names", (DL_FUNC) &zusvg_status_names, 0},
+    {"zusvg_doc_alive",    (DL_FUNC) &zusvg_doc_alive,    1},
     {NULL, NULL, 0}
 };
 

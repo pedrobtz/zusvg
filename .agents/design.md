@@ -61,7 +61,7 @@ These are zusvg's cells for the family table that alignment rule R1 of [`zu-fami
 | Hides symbols (`$(C_VISIBILITY)`) | yes, from Stage 0 (R3); plutovg's and plutosvg's symbols included |
 | Vendored code | plutosvg 0.0.8, plutovg 1.3.3 (§9) |
 | `LinkingTo` | `zufast (>= 0.1.0)`; `zukomp` from Stage 6 (its C API, for PNG's zlib stream) |
-| `Imports` | `grDevices`; `zukomp` from Stage 6 (`.svgz`, and so that its callables are registered) |
+| `Imports` | `grDevices`; `zukomp` from Stage 6 (so that its callables are registered) |
 | `Depends: R` | 4.1 (R2) |
 | Language | en-GB (R2) |
 
@@ -228,9 +228,9 @@ Vendoring follows zucbor §13 and the template: the two trees live byte-identica
 | raw vector | copied into the document |
 | character string | its bytes, after `enc2utf8()` |
 | connection | read whole with `readBin()` in 64 KiB blocks up to `max_size + 1` (zucbor's `zu_read_bounded()`, `R/read.R`) |
-| file (`svg_read()`) | read whole; gzip (`.svgz`) through `zukomp` |
+| file (`svg_read()`) | read whole through `file()`, which decompresses gzip (`.svgz`) itself |
 
-A `.svgz` file or a gzip-magic raw vector is decompressed with `zukomp::komp_decompress(max_output = max_size)`, so a small compressed bomb cannot become a large document; until zukomp is on CRAN (R10 release order) `.svgz` is `zusvg_unsupported_input`, and the stage that adds it (Stage 6) is the one that adds zukomp to `Imports`.
+gzip needs no dependency (*decided at Stage 1*, D16). R's `file()` decompresses a `.svgz` file transparently. A raw vector or connection that starts with the gzip magic bytes is written to a temporary file and read back through `gzfile()`. `gzcon(rawConnection())` was the first choice, but valgrind showed R's own `do_gzcon()` reading uninitialised memory (R 4.6). Either way the bytes pass through the same bounded read, so `max_size` caps the decompressed size and a small compression bomb fails as `zusvg_limit_error`. Corrupt gzip fails as `zusvg_parse_error` with `offset = NA`. The RFC planned `zukomp::komp_decompress()` for this; zukomp is now needed only for PNG compression (§7).
 
 ---
 
@@ -246,7 +246,6 @@ A `.svgz` file or a gzip-magic raw vector is decompressed with `zukomp::komp_dec
 | `zusvg_render_error` | plutosvg's render returned `false` |
 | `zusvg_memory_error` | a surface or buffer could not be allocated |
 | `zusvg_io_error` | a file or connection could not be read or written |
-| `zusvg_unsupported_input` | `.svgz` while `zukomp` is not a dependency (§10) |
 
 Warnings: `zusvg_text_skipped` and `zusvg_clip_skipped` (§6.4). Every class inherits `zusvg_error` (or `zusvg_warning`); the parse error carries `offset` when the pre-scan found the fault and `NA` when the loader did, since the loader gives no position. Statuses come back from C by enumerator name and R raises (`zucbor`'s convention). Tests assert on class.
 
@@ -276,7 +275,7 @@ The document's bytes and its plutosvg object live in one external pointer; the s
 
 ## 14. Build, portability and CRAN
 
-- `src/Makevars` lists the object files by hand: the 12 vendored ones (11 plutovg, `plutosvg.c`) plus the project's (`init.c` at Stage 0, then `zsg_scan.c`, `zsg_doc.c`, `zsg_render.c` and `zsg_r.c`, 17 in all from Stage 2). Portable make only, no `Makevars.win`. `PKG_CFLAGS = $(C_VISIBILITY)`. `PKG_CPPFLAGS` holds:
+- `src/Makevars` lists the object files by hand: the 12 vendored ones (11 plutovg, `plutosvg.c`) plus the project's (`init.c` at Stage 0, then `zsg_scan.c` and `zsg_doc.c` at Stage 1 and `zsg_render.c` at Stage 2, 17 in all). Portable make only, no `Makevars.win`. `PKG_CFLAGS = $(C_VISIBILITY)`. `PKG_CPPFLAGS` holds:
   - `-Ivendor/plutovg/include -Ivendor/plutosvg/source`;
   - `-DPLUTOVG_BUILD_STATIC -DPLUTOSVG_BUILD_STATIC`, and never `-DPLUTOVG_BUILD` or `-DPLUTOSVG_BUILD`, which export the API (§4);
   - `-DSTBIDEF=extern -DSTBIWDEF=extern -DSTBTT_DEF=extern` (§9);
@@ -288,7 +287,7 @@ The document's bytes and its plutosvg object live in one external pointer; the s
 - R CMD check also reports any diagnostic-suppressing pragma in the sources. stb_truetype's `#pragma GCC diagnostic ignored "-Wcast-qual"` is removed by patch `0006`, since `-Wcast-qual` is in neither `-Wall` nor `-Wextra`.
 - Compiler warnings from the vendored trees under `-Wall -Wextra -pedantic` are recorded in Stage 0 (`src/vendor/PROVENANCE`; under CRAN's `-Wall -pedantic`, clang and GCC now print none); any that CRAN's own flags would print are fixed by a recorded patch (D4), not by silencing, and never by a diagnostic-suppressing pragma, which draws its own NOTE.
 - No system dependency: `SystemRequirements` is empty, which is the package's reason to exist.
-- `LinkingTo: zufast (>= 0.1.0)`, with `Remotes: pedrobtz/zufast@main` during development only (R10.2). CRAN order (R10.5): after `zufast`, which on 2026-10-08 carries `Version: 0.1.0` but no tag and is not yet submitted. `zukomp` (submitted 2026-10-06, not yet accepted) must be on CRAN before Stage 6 adds it to `LinkingTo` and `Imports`. If it is not by then, `.svgz` stays `zusvg_unsupported_input` for 0.1.0 and PNG keeps `stb_image_write`'s deflate.
+- `LinkingTo: zufast (>= 0.1.0)`, with `Remotes: pedrobtz/zufast@main` during development only (R10.2). CRAN order (R10.5): after `zufast`, which on 2026-10-08 carries `Version: 0.1.0` but no tag and is not yet submitted. `zukomp` (submitted 2026-10-06, not yet accepted) must be on CRAN before Stage 6 adds it to `LinkingTo` and `Imports`. If it is not by then, PNG keeps `stb_image_write`'s deflate for 0.1.0.
 - `Imports: grDevices` (`col2rgb()`, from Stage 2); `Suggests` names every package a test, example or vignette uses (`rsvg`, `png`, `jpeg`, `grid`, `ggplot2`, `testthat`, `withr`, `knitr`, `rmarkdown`).
 - Licence MIT with the vendored notices (§9); `Language: en-GB`; `.Rbuildignore` covers `.agents/`, `.claude/`, `tools/`, `fuzz/`.
 
@@ -337,6 +336,7 @@ Measured by `tools/run-benchmarks` against `rsvg` and `magick` where installed, 
 | D13 | Internal prefix | `zsg_` / `ZSG_`, not the RFC's `zsv_` (§3; *read 2026-10-08*) |
 | D14 | Exact hashes | checked in CI's conformance job and under `skip_on_cran()`; CRAN's tests use a one-level pixel tolerance (§15) |
 | D15 | Clip paths | for 0.1.0, a `zusvg_clip_skipped` warning when a document references a clip path that is not a full-canvas rectangle, with `has_clip` in `svg_elements()`; a patch applying `clip-path`, offered upstream, after 0.1.0 (§3's survey; §18 Q8) |
+| D16 | gzip input | decompressed with base R (`file()`, `gzfile()`) under the bounded read; no zukomp, and no `zusvg_unsupported_input` class (§10) |
 
 Reasons where they are not in the section cited:
 
@@ -397,7 +397,7 @@ Each stays the maintainer's until recorded above; the recommendation is the RFC'
 ## 20. What this design does not decide
 
 - The patch set's exact content, which the first build and the first fuzz run determine (D4).
-- Whether `zukomp` is on CRAN in time for Stage 6; if not, `.svgz` and the better PNG compression move past 0.1.0 (§14).
+- Whether `zukomp` is on CRAN in time for Stage 6; if not, the better PNG compression moves past 0.1.0 (§14).
 - §18 Q7: the name.
 - §18 Q9: whether floating-point contraction breaks byte-identity across architectures.
 - Two values that later stages record here: the `rsvg` cross-check's bound (Stage 3, §15) and the benchmarks (Stage 6, §16).
