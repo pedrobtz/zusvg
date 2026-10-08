@@ -217,7 +217,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
   - An `id` whose element draws nothing has zero extents and fails as `zusvg_render_error`.
   - Palette names given with their `--` are accepted.
   - The palette is copied with `R_alloc()` before the surface exists, so its callback never touches R.
-- **The `rsvg` cross-check** of pixels within tolerance stays in Stage 6's conformance job, where `rsvg` is installed. `rsvg` is not installed locally, so the shape-parity test was skipped here.
+- **No test calls `rsvg`.** A shape-parity test did, until valgrind found leaks and uninitialised reads inside librsvg and cairo. The shapes are pinned against their dimensions instead, and `rsvg` left `Suggests`. The pixel cross-check runs in Stage 6's conformance job, which installs `rsvg` itself.
 
 ---
 

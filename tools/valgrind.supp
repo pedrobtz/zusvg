@@ -40,26 +40,3 @@
    fun:in_Cairo
 }
 
-# librsvg (through the rsvg package, a Suggests used only by the shape-parity
-# test in test-outputs.R) reads uninitialised memory while it registers its
-# GObject types. Matched on librsvg's own object, so nothing in zusvg is
-# hidden by it.
-{
-   librsvg-type-registration-cond
-   Memcheck:Cond
-   ...
-   obj:*/librsvg-2.so*
-}
-{
-   librsvg-type-registration-value8
-   Memcheck:Value8
-   ...
-   obj:*/librsvg-2.so*
-}
-{
-   librsvg-leaks
-   Memcheck:Leak
-   match-leak-kinds: definite,indirect
-   ...
-   obj:*/librsvg-2.so*
-}

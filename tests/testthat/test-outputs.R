@@ -107,12 +107,3 @@ test_that("<use> sizes a <symbol> by its own width and height (patch 0008)", {
   expect_pixel(r, 24, 24, c(0xda, 0x41, 0x67, 255))
   expect_pixel(r, 30, 2, c(0, 0, 0, 0), tolerance = 0)
 })
-
-test_that("the array and raw forms have rsvg's shapes", {
-  skip_if_not_installed("rsvg")
-  txt <- readLines(fixture("rect.svg"))
-  path <- withr::local_tempfile(fileext = ".svg")
-  writeLines(txt, path)
-  expect_identical(dim(svg_render(txt, as = "array")), dim(rsvg::rsvg(path)))
-  expect_identical(dim(svg_render(txt, as = "raw")), dim(rsvg::rsvg_raw(path)))
-})
