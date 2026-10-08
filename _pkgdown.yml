@@ -3,3 +3,22 @@ template:
   bootstrap: 5
 development:
   mode: auto
+reference:
+  - title: Loading
+    contents:
+      - svg_load
+      - svg_read
+      - svg_validate
+  - title: Rendering
+    contents:
+      - svg_render
+      - svg_png
+  - title: Measuring
+    contents:
+      - svg_size
+      - svg_extents
+      - svg_elements
+  - title: Conditions and build information
+    contents:
+      - zusvg-conditions
+      - zusvg_info
