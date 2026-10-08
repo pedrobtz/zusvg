@@ -45,3 +45,12 @@ test_that("zusvg_info() prints", {
   expect_output(print(zusvg_info()), "plutosvg:  0.0.8")
   expect_output(print(zusvg_info()), "self-test: ok")
 })
+
+test_that("zusvg_info() reports the defaults svg_load() and svg_render() use", {
+  lim <- zusvg_info()$limits
+  expect_identical(lim$max_size, formals(svg_load)$max_size |> eval())
+  expect_identical(lim$max_elements, formals(svg_load)$max_elements)
+  expect_identical(lim$max_depth, formals(svg_load)$max_depth)
+  expect_identical(lim$max_pixels, formals(svg_render)$max_pixels)
+  expect_identical(zusvg_info()$png_compression, "stb_image_write")
+})

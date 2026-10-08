@@ -1,0 +1,81 @@
+#!/usr/bin/env Rscript
+# Benchmarks against rsvg and magick where installed (.agents/design.md §16).
+# Informational, not a gate; the results are recorded in design §16.
+# Benchmark an installed, optimised build: load_all() compiles with -O0.
+# R_LIBS can point at a library holding one, e.g. from R CMD INSTALL -l.
+suppressMessages(library(zusvg))
+stopifnot(requireNamespace("bench", quietly = TRUE))
+set.seed(1)
+
+# An icon in the style of the sets the survey read (design §3): a 24-unit
+# viewBox, a few filled and stroked paths, currentColor.
+icon <- paste0(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" ',
+  'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
+  '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  '<path d="M9 21v-6h6v6"/><circle cx="18" cy="6" r="2" fill="currentColor"/></svg>')
+# A dense icon: 40 random curves, the worst case for a 24-unit icon.
+dense <- paste0(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">',
+  '<path d="', paste(sprintf("M%.1f %.1fl%.1f %.1fc1 2 3 4 5 6z",
+                             runif(40, 0, 20), runif(40, 0, 20),
+                             runif(40, -3, 3), runif(40, -3, 3)), collapse = ""),
+  '" fill="currentColor"/></svg>')
+# A 500 KB "map": many small filled and stroked polygons, as regions are.
+poly <- function() {
+  n <- sample(8:30, 1)
+  cx <- runif(1, 0, 1000)
+  cy <- runif(1, 0, 1000)
+  a <- sort(runif(n, 0, 2 * pi))
+  r <- runif(n, 5, 25)
+  sprintf('<polygon points="%s" fill="#%06x" stroke="#333" stroke-width="0.5"/>',
+          paste(sprintf("%.1f,%.1f", cx + r * cos(a), cy + r * sin(a)), collapse = " "),
+          sample(0:0xffffff, 1))
+}
+body <- character()
+while (sum(nchar(body)) < 5e5) body <- c(body, poly())
+map <- paste0('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">',
+              paste(body, collapse = ""), "</svg>")
+cat(sprintf("icon: %d bytes; map: %d bytes, %d polygons\n", nchar(icon), nchar(map), length(body)))
+
+files <- function(txt) { p <- tempfile(fileext = ".svg"); writeLines(txt, p); p }
+icon_path <- files(icon)
+dense_path <- files(dense)
+doc_dense <- svg_load(dense)
+map_path <- files(map)
+doc_icon <- svg_load(icon)
+doc_map <- svg_load(map)
+
+cases <- list(
+  icon_64 = list(
+    zusvg_text = function() svg_render(icon, width = 64),
+    zusvg_doc = function() svg_render(doc_icon, width = 64),
+    rsvg = if (requireNamespace("rsvg", quietly = TRUE)) function() rsvg::rsvg_nativeraster(icon_path, width = 64),
+    magick = if (requireNamespace("magick", quietly = TRUE)) function() magick::image_read_svg(icon_path, width = 64)
+  ),
+  dense_64 = list(
+    zusvg_doc = function() svg_render(doc_dense, width = 64),
+    rsvg = if (requireNamespace("rsvg", quietly = TRUE)) function() rsvg::rsvg_nativeraster(dense_path, width = 64)
+  ),
+  map_2000 = list(
+    zusvg_doc = function() svg_render(doc_map, width = 2000),
+    rsvg = if (requireNamespace("rsvg", quietly = TRUE)) function() rsvg::rsvg_nativeraster(map_path, width = 2000),
+    magick = if (requireNamespace("magick", quietly = TRUE)) function() magick::image_read_svg(map_path, width = 2000)
+  )
+)
+for (nm in names(cases)) {
+  fs <- Filter(Negate(is.null), cases[[nm]])
+  r <- bench::mark(exprs = lapply(fs, function(f) call("(", as.call(list(f)))),
+                   check = FALSE, min_iterations = 5, max_iterations = 200)
+  r$expression <- names(fs)
+  cat("\n==", nm, "\n")
+  print(r[, c("expression", "min", "median", "mem_alloc")])
+}
+t0 <- Sys.time()
+for (i in 1:1000) svg_render(doc_icon, width = 64)
+cat(sprintf("\n1000 icons at 64x64 from a loaded document: %.3f s\n",
+            as.numeric(Sys.time() - t0, units = "secs")))
+t0 <- Sys.time()
+for (i in 1:1000) svg_render(icon, width = 64)
+cat(sprintf("1000 icons at 64x64 from text (load + render): %.3f s\n",
+            as.numeric(Sys.time() - t0, units = "secs")))

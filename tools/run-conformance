@@ -1,0 +1,29 @@
+#!/usr/bin/env Rscript
+# The rsvg cross-check (.agents/design.md §15; roadmap Stage 6): every
+# fixture rendered by zusvg and by rsvg at the same size, compared as
+# premultiplied RGBA (rsvg::rsvg() returns premultiplied colour), mean
+# absolute difference in 0-255 levels within tools/conformance.tsv's bound.
+# Run from the package root with rsvg installed; it is not a CRAN test.
+suppressMessages(pkgload::load_all(".", quiet = TRUE))
+if (!requireNamespace("rsvg", quietly = TRUE)) stop("rsvg is not installed")
+tol <- read.delim("tools/conformance.tsv", colClasses = "character")
+bound <- function(f) {
+  b <- tol$max_mean[tol$fixture == f]
+  as.numeric(if (length(b)) b else tol$max_mean[tol$fixture == "default"])
+}
+fs <- sort(list.files("tests/testthat/fixtures", "[.]svg$", full.names = TRUE))
+bad <- 0
+for (f in fs) {
+  a <- svg_render(svg_read(f), width = 48, as = "array", quiet = TRUE)
+  b <- rsvg::rsvg(f, width = ncol(a), height = nrow(a))
+  for (k in 1:3) a[, , k] <- a[, , k] * a[, , 4]
+  m <- mean(abs(a - b)) * 255
+  lim <- bound(basename(f))
+  ok <- identical(dim(a), dim(b)) && m <= lim
+  cat(sprintf("%-4s %-28s mean %6.2f  bound %s\n", if (ok) "ok" else "FAIL",
+              basename(f), m, format(lim)))
+  if (!ok) bad <- bad + 1
+}
+cat(sprintf("==> rsvg %s: %d of %d fixtures within bounds\n",
+            as.character(packageVersion("rsvg")), length(fs) - bad, length(fs)))
+if (bad) quit(status = 1)

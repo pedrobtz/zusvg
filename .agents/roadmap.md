@@ -284,7 +284,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 6 — zukomp compression; conformance and benchmarks · M
 
-**Status:** not started.
+**Status:** in review.
 
 **Do**
 
@@ -298,6 +298,16 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 **Exit**
 
 - Hashes identical on every runner (or the determinism claim amended in design §8 in the same commit); the cross-check within tolerance; benchmarks recorded.
+
+**What actually happened**
+
+- **zukomp is not on CRAN** (2026-10-08), so PNG keeps `stb_image_write`'s deflate. `zusvg_info()$png_compression` says so, and the item moves to *After 0.1.0*.
+- **The `rsvg` cross-check** (`tools/run-conformance`, bounds in `tools/conformance.tsv`) compares premultiplied colour, since `rsvg::rsvg()` returns it premultiplied.
+  - Shapes, paths, strokes, transforms and structure agree within a mean of 0.5 levels of 255.
+  - Each known difference has its own bound and reason: clips (D15), text (D3), `var()`, group opacity, semi-transparent gradient stops, and smoothing of upscaled embedded images.
+- **Found: plutosvg applies group `opacity` to each child**, not to the composited group (design §9).
+- **Benchmarks are recorded in design §16.** Making `svg_load()` keep plain lists instead of data frames took loading an icon from 300 µs to 19 µs. Every performance target is met.
+- **Determinism** is checked by `conformance.yaml` on Linux (x86-64 and arm64), macOS (arm64 and Intel) and Windows. Locally, the pinned hashes match both the `-O0` (`load_all()`) and `-O2` builds.
 
 ---
 

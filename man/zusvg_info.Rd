@@ -15,6 +15,11 @@ release the bundled copy was taken from).
 \item \code{patches}: identifiers of the local patches applied to the bundled
 copies, in order (see \code{src/vendor/PROVENANCE}).
 \item \code{image_formats}: the embedded image formats the bundled decoder reads.
+\item \code{png_compression}: what compresses PNG output: \code{"stb_image_write"},
+the bundled encoder's own deflate.
+\item \code{limits}: the default limits of \code{\link[=svg_load]{svg_load()}} and \code{\link[=svg_render]{svg_render()}}, and
+the fixed ones: \code{render_steps} element visits per render, and the
+largest embedded image side, \code{image_dimension}.
 \item \code{smoke_ok}: \code{TRUE} if the bundled libraries load and render a known
 document correctly.
 }

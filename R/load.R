@@ -96,20 +96,18 @@ zsg_load_bytes <- function(bytes, width, height, limits, call) {
                c(limits$max_size, limits$max_elements, limits$max_depth),
                limits$images)
   if (res$status != "ZSG_OK") zsg_raise_fault(res, limits, call)
-  elements <- data.frame(
-    id = res$ids, tag = res$tags, parent = res$parent, n_text = res$n_text_in,
-    stringsAsFactors = FALSE
+  # Plain lists, not data frames: building data frames was most of the
+  # cost of loading an icon (roadmap Stage 6).
+  elements <- list(
+    id = res$ids, tag = res$tags, parent = res$parent, n_text = res$n_text_in
   )
-  attrs <- data.frame(
-    elem = res$attr_elem, name = res$attr_name, value = res$attr_value,
-    stringsAsFactors = FALSE
-  )
+  attrs <- list(elem = res$attr_elem, name = res$attr_name, value = res$attr_value)
   doc <- structure(
     list(
       ptr = res$ptr,
       width = res$width,
       height = res$height,
-      n_elements = as.double(nrow(elements)),
+      n_elements = as.double(length(elements$id)),
       n_text = res$n_text,
       n_image = res$n_image,
       elements = elements,
