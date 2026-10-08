@@ -19,13 +19,13 @@ Source:
 [`DESCRIPTION`](https://github.com/pedrobtz/zusvg/blob/main/DESCRIPTION)
 
 Baltazar P (2026). *zusvg: Render 'SVG' Images Without System
-Dependencies*. R package version 0.0.0.9000,
+Dependencies*. R package version 0.1.0,
 <https://pedrobtz.github.io/zusvg/>.
 
     @Manual{,
       title = {zusvg: Render 'SVG' Images Without System Dependencies},
       author = {Pedro Baltazar},
       year = {2026},
-      note = {R package version 0.0.0.9000},
+      note = {R package version 0.1.0},
       url = {https://pedrobtz.github.io/zusvg/},
     }

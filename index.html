@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Render SVG Images Without System Dependencies">
-<meta name="description" content="Renders SVG documents to native rasters, RGBA arrays and PNG or JPEG files with bundled copies of the plutosvg and plutovg C libraries, so it installs from source with no system library and draws the same pixels on every platform. Aimed at icons and logos: text, filters, masks, patterns, markers and CSS style sheets are not rendered.">
-<meta property="og:description" content="Renders SVG documents to native rasters, RGBA arrays and PNG or JPEG files with bundled copies of the plutosvg and plutovg C libraries, so it installs from source with no system library and draws the same pixels on every platform. Aimed at icons and logos: text, filters, masks, patterns, markers and CSS style sheets are not rendered.">
+<meta name="description" content="Renders SVG documents to native rasters, red-green-blue-alpha arrays and PNG or JPEG files with bundled copies of the plutosvg and plutovg C libraries, so it installs from source with no system library and draws the same pixels on every platform. It is meant for icons and logos: text, filters, masks, patterns, markers, clip paths and CSS style sheets are not rendered.">
+<meta property="og:description" content="Renders SVG documents to native rasters, red-green-blue-alpha arrays and PNG or JPEG files with bundled copies of the plutosvg and plutovg C libraries, so it installs from source with no system library and draws the same pixels on every platform. It is meant for icons and logos: text, filters, masks, patterns, markers, clip paths and CSS style sheets are not rendered.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">zusvg</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Unreleased version">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,7 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="articles/zusvg.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
@@ -51,11 +52,11 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>The goal of zusvg is to …</p>
+<p>zusvg renders SVG icons and logos to pixels: a <code>nativeRaster</code> for grid and base graphics, an RGBA array, raw RGBA bytes, or a PNG or JPEG file. It bundles two small C libraries, <a href="https://github.com/sammycage/plutosvg" class="external-link">plutosvg</a> and <a href="https://github.com/sammycage/plutovg" class="external-link">plutovg</a>, so it installs from source on every platform with no system library: no librsvg, no cairo, no Rust toolchain. The same document gives the same pixels everywhere.</p>
+<p>It is meant for icons and logos. It does not render text, filters, masks, patterns, markers, CSS style sheets or clip paths; a document that uses them renders without them, and text and clips warn. For plots, diagrams and badges, which mostly need text, use <a href="https://docs.ropensci.org/rsvg/" class="external-link">rsvg</a>.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>You can install the development version of zusvg from <a href="https://github.com/" class="external-link">GitHub</a> with:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"pedrobtz/zusvg"</span><span class="op">)</span></span></code></pre></div>
@@ -63,10 +64,24 @@
 <div class="section level2">
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
-<p>This is a basic example which shows you how to solve a common problem:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pedrobtz.github.io/zusvg/">zusvg</a></span><span class="op">)</span></span>
-<span><span class="co">## basic example code</span></span></code></pre></div>
+<span></span>
+<span><span class="va">icon</span> <span class="op">&lt;-</span> <span class="st">'&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"</span></span>
+<span><span class="st">  fill="none" stroke="currentColor" stroke-width="2"&gt;</span></span>
+<span><span class="st">  &lt;path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/&gt;&lt;/svg&gt;'</span></span>
+<span></span>
+<span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/svg_render.html">svg_render</a></span><span class="op">(</span><span class="va">icon</span>, width <span class="op">=</span> <span class="fl">64</span>, color <span class="op">=</span> <span class="st">"steelblue"</span><span class="op">)</span>   <span class="co"># a nativeRaster</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/frame.html" class="external-link">plot.new</a></span><span class="op">(</span><span class="op">)</span>; <span class="fu"><a href="https://rdrr.io/r/graphics/rasterImage.html" class="external-link">rasterImage</a></span><span class="op">(</span><span class="va">r</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/svg_png.html">svg_png</a></span><span class="op">(</span><span class="va">icon</span>, <span class="st">"house.png"</span>, width <span class="op">=</span> <span class="fl">128</span><span class="op">)</span>                   <span class="co"># a PNG file</span></span>
+<span><span class="va">a</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/svg_render.html">svg_render</a></span><span class="op">(</span><span class="va">icon</span>, width <span class="op">=</span> <span class="fl">64</span>, as <span class="op">=</span> <span class="st">"array"</span><span class="op">)</span>           <span class="co"># the shape rsvg's rsvg() returns</span></span></code></pre></div>
+<p><code><a href="reference/svg_load.html">svg_load()</a></code> checks untrusted input under limits on size, element count, nesting and embedded images before the renderer sees a byte; <code><a href="reference/svg_elements.html">svg_elements()</a></code> and <code>svg_render(id = )</code> cut an icon sheet into icons; and <code>palette</code> answers CSS <code><a href="https://rdrr.io/r/stats/cor.html" class="external-link">var()</a></code> colours. See the vignette, <code><a href="articles/zusvg.html">vignette("zusvg")</a></code>.</p>
+</div>
+<div class="section level2">
+<h2 id="licence">Licence<a class="anchor" aria-label="anchor" href="#licence"></a>
+</h2>
+<p>MIT. plutosvg and plutovg are MIT; plutovg contains FreeType-derived code under the FreeType Licence and the stb libraries; see <code>inst/COPYRIGHTS</code>.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -101,13 +116,7 @@
 </ul>
 </div>
 
-<div class="dev-status">
-<h2 data-toc-skip>Dev status</h2>
-<ul class="list-unstyled">
-<li><a href="https://github.com/pedrobtz/zusvg/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/pedrobtz/zusvg/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
-<li><a href="https://github.com/pedrobtz/zusvg/actions/workflows/coverage.yaml" class="external-link"><img src="https://raw.githubusercontent.com/pedrobtz/zusvg/main/.github/badges/coverage.svg" alt="coverage"></a></li>
-</ul>
-</div>
+
 
   </aside>
 </div>
