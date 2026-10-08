@@ -19,7 +19,7 @@ test_that("zusvg_info() lists every local patch, in order", {
     c(
       "0001-use-depth", "0002-loader-alloc-checks", "0003-stbtt-def-guard",
       "0004-stroker-unused-point", "0005-stbiw-snprintf",
-      "0006-stbtt-no-pragmas"
+      "0006-stbtt-no-pragmas", "0007-bsearch-const"
     )
   )
 })

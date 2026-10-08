@@ -73,7 +73,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 0 — Vendor trees, patch set, update and verify tools, first build · L
 
-**Status:** in review (#3). Every exit criterion is met locally on macOS arm64; CI on Linux and Windows decides the rest.
+**Status:** in review (#11). Every exit criterion is met locally on macOS arm64, and the first CI run passed on every leg except `clang23`, which `0007` addresses.
 
 **Goal:** both libraries compile into `zusvg.so` on Linux, macOS and Windows, byte-identical to their tags plus a recorded patch set, with no forbidden symbol, and the package checks 0/0/0 before any `svg_*` function exists.
 
@@ -114,11 +114,12 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 **What actually happened**
 
 - **Tracking.** Parent #2 and stage issues #3–#10 were opened. The parent went on project 3 directly, because zusvg had no draft card for `stage-cards.sh` to replace; adding it to the script's list is pedrobtz/packages#24.
-- **Six patches, not two.** `0001-use-depth` and `0002-loader-alloc-checks` were planned. Four more came from R CMD check itself, and none could be fixed in `Makevars` alone:
+- **Seven patches, not two.** `0001-use-depth` and `0002-loader-alloc-checks` were planned. Five more came from R CMD check itself, and none could be fixed in `Makevars` alone:
   - `0003` guards `STBTT_DEF`, so the build can give stb_truetype external linkage, which ends 30 of the 68 `-Wunused-function` warnings.
   - `0004` removes a variable that GCC reports as set but not used.
   - `0005` replaces the `sprintf()` that external linkage kept alive with `snprintf()`.
   - `0006` removes a diagnostic-suppressing pragma, which the check NOTEs.
+  - `0007` keeps a `bsearch()` result `const`. C23 makes `bsearch()` const-preserving, and the first CI run's `clang23` leg (R-devel's C23) reported the discarded qualifier. Windows, macOS, and Linux with GCC 16 and clang all passed that same run.
 - **`0002` covers only plutosvg's loader.** plutovg's growth arrays have no failure path (design §9); Stage 5's allocation-failure job tests them.
 - **Configuration found by the build:**
   - `STBIDEF` and `STBIWDEF` set to `extern` for the other 38 unused stb functions.

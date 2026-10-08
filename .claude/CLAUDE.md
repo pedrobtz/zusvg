@@ -14,7 +14,7 @@ It is a member of the `zu*` family (sibling checkouts in `../`), the first whose
 ## Current state
 
 **2026-10-08: Stage 0 is in review.** Its pull request delivers the following, and every other export arrives from Stage 1:
-- plutosvg 0.0.8 and plutovg 1.3.3, vendored with six patches;
+- plutosvg 0.0.8 and plutovg 1.3.3, vendored with seven patches;
 - `tools/update-plutosvg`, `verify-vendor`, `check-symbols` and `check-use-chain`;
 - `zusvg_info()`;
 - `vendor.yaml` and `vendor-upstream.yaml`.
@@ -182,7 +182,7 @@ plutosvg (MIT) pinned at **v0.0.8** and plutovg (MIT, with FreeType Licence part
 - Record the tags, the commits, the tarball checksums, the file lists, every patch with its reason, and the compiler warnings seen, in `PROVENANCE`; keep `tools/update-plutosvg` mechanical.
 - Keep each library's `LICENSE` and plutovg's `FTL.TXT` in the vendor tree; declare every copyright holder found in the vendored file headers as `cph` in `Authors@R`; keep `inst/COPYRIGHTS` and `LICENSE.note` current; `License: MIT + file LICENSE` with `Copyright: file inst/COPYRIGHTS` (zuhtml's and data.sketches' CRAN precedent).
 - Only the sources, headers and licence files are vendored: no tests, examples, Meson or CMake files, no FreeType integration (`PLUTOSVG_HAS_FREETYPE` undefined), no `HAVE_THREADS_H`.
-- The patch set (design D4, `tools/patches/`): `0001-use-depth` (`<use>` hops count against the render depth; `tools/check-use-chain` proves it), `0002-loader-alloc-checks` (plutosvg's loader allocations; plutovg's growth arrays are not covered), and four that R CMD check demanded: `0003-stbtt-def-guard`, `0004-stroker-unused-point`, `0005-stbiw-snprintf`, `0006-stbtt-no-pragmas`. Compile with `-DPLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD`; never set `STBI_NO_STDIO`, which breaks `plutovg-surface.c`. Compiler warnings seen are recorded in `tools/vendor-warnings.txt`, which `tools/update-plutosvg` copies into `PROVENANCE`.
+- The patch set (design D4, `tools/patches/`): `0001-use-depth` (`<use>` hops count against the render depth; `tools/check-use-chain` proves it), `0002-loader-alloc-checks` (plutosvg's loader allocations; plutovg's growth arrays are not covered), and five that R CMD check demanded: `0003-stbtt-def-guard`, `0004-stroker-unused-point`, `0005-stbiw-snprintf`, `0006-stbtt-no-pragmas`, `0007-bsearch-const` (C23 only). Compile with `-DPLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD`; never set `STBI_NO_STDIO`, which breaks `plutovg-surface.c`. Compiler warnings seen are recorded in `tools/vendor-warnings.txt`, which `tools/update-plutosvg` copies into `PROVENANCE`.
 - `vendor.yaml` runs `tools/verify-vendor` and `tools/check-symbols` on every push, so an upstream bump cannot bring a forbidden symbol back.
 
 ## Commits and pull requests

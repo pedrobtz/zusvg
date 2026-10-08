@@ -350,6 +350,7 @@ Reasons where they are not in the section cited:
   - `0004-stroker-unused-point`: a variable GCC's `-Wall` reports as set but not used.
   - `0005-stbiw-snprintf`: the HDR writer's `sprintf()` (§9).
   - `0006-stbtt-no-pragmas`: the diagnostic-suppressing pragmas (§14).
+  - `0007-bsearch-const`: in C23, `bsearch()` on a `const` table returns `const void *`, and the non-const result in `lookupid()` was a qualifier-discarding warning under R-devel's clang (found by the `clang23` CI leg).
 
   Expected later:
   - from Stage 6, the one-line `STBIW_ZLIB_COMPRESS` prototype (§7);

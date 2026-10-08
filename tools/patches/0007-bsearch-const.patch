@@ -1,0 +1,23 @@
+Subject: Keep lookupid()'s bsearch() result const
+
+C23 makes bsearch() a generic function that returns a pointer to const
+when its base argument points to const. lookupid() searches a const
+name_entry_t table and assigns the result to a non-const pointer, which
+clang in C23 mode reports as discarding qualifiers; R CMD check counts that
+as a significant warning (R-devel compiles C as C23). The entry is only
+read, so declare it const, as plutovg-paint.c already does for its
+colormap.
+
+zusvg: .agents/design.md §14. Offered upstream.
+
+--- a/plutosvg/source/plutosvg.c
++++ b/plutosvg/source/plutosvg.c
+@@ -112,7 +112,7 @@
+         name[i] = data[i];
+     name[length] = '\0';
+ 
+-    name_entry_t* entry = bsearch(name, table, count / sizeof(name_entry_t), sizeof(name_entry_t), name_entry_compare);
++    const name_entry_t* entry = bsearch(name, table, count / sizeof(name_entry_t), sizeof(name_entry_t), name_entry_compare);
+     if(entry == NULL)
+         return 0;
+     return entry->id;

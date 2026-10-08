@@ -27,6 +27,7 @@ plutovg
                  0004-stroker-unused-point.patch
                  0005-stbiw-snprintf.patch
                  0006-stbtt-no-pragmas.patch
+                 0007-bsearch-const.patch
 
 src/vendor/plutosvg/ and src/vendor/plutovg/ are the files listed in
 tools/plutosvg-files.txt and tools/plutovg-files.txt, copied from the
