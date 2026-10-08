@@ -35,6 +35,7 @@ plutovg
                  0012-dash-budget.patch
                  0013-stroker-empty-border.patch
                  0014-stbiw-jpg-unsigned-bits.patch
+                 0015-use-ancestor-cycle.patch
 
 src/vendor/plutosvg/ and src/vendor/plutovg/ are the files listed in
 tools/plutosvg-files.txt and tools/plutovg-files.txt, copied from the

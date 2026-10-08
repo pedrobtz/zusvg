@@ -269,7 +269,8 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
   - undefined behaviour from an out-of-range coordinate, and from a stroke in a document scaled by `1e16` (`0010`);
   - signed overflow in stb_image's JPEG IDCT (`0011`);
   - a dash explosion that ran out of memory, and in single precision never ended (`0012`);
-  - in CI, on Linux x86-64: a NULL `memcpy()` source when stroking a one-point polygon (`0013`).
+  - in CI, on Linux x86-64: a NULL `memcpy()` source when stroking a one-point polygon (`0013`);
+  - in CI: a `<symbol>` that `<use>`s itself made plutosvg's parent chain a loop and hung attribute inheritance (`0015`).
 
   A JPEG declaring 7 900 by 32 500 pixels in one kilobyte timed out; `STBI_MAX_DIMENSIONS=4096` caps it (D19). After those fixes, 20 minutes ran clean locally.
 - **§18 Q2 is decided** (D18): one million element visits per render (`0009`). A two-kilobyte fan-out now fails in milliseconds as `zusvg_limit_error` (`limit = "render_steps"`).

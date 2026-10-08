@@ -1,0 +1,34 @@
+Subject: Refuse a <use> that references its own ancestor
+
+render_use() points the referenced element's parent at the <use> while it
+renders it. When the <use> is inside the element it references -- a
+<symbol id="s"> holding <use href="#s"/>, found by zusvg's fuzzer -- that
+makes the parent chain a loop (s -> use -> s), and find_attribute()'s
+inheritance walk never ends. has_cycle_reference() looks only at the
+render stack, so the first pass through such a <use> is not caught. The
+render step budget counts render_element() calls and does not see the
+loop either.
+
+Walk the <use>'s ancestors before rewriting the pointer, and render
+nothing when the referenced element is among them, as SVG 1.1 section 5.6
+treats a circular reference.
+
+zusvg: .agents/design.md §9. Offered upstream.
+
+--- a/plutosvg/source/plutosvg.c
++++ b/plutosvg/source/plutosvg.c
+@@ -2209,6 +2209,14 @@
+     element_t* ref = resolve_href(context->document, element);
+     if(ref == NULL)
+         return;
++    /* A <use> of its own ancestor (or of itself) is a circular reference:
++     * rewriting ref->parent below would make the parent chain a loop, which
++     * attribute inheritance then walks forever. */
++    for(const element_t* p = element; p; p = p->parent) {
++        if(p == ref) {
++            return;
++        }
++    }
+     length_t x = {0, length_type_fixed};
+     length_t y = {0, length_type_fixed};
+ 

@@ -17,7 +17,6 @@ test_that("zusvg_info() lists every local patch, in order", {
   expect_identical(
     zusvg_info()$patches,
     c(
-<<<<<<< HEAD
       "0001-use-depth",
       "0002-loader-alloc-checks",
       "0003-stbtt-def-guard",
@@ -30,20 +29,9 @@ test_that("zusvg_info() lists every local patch, in order", {
       "0010-ft-coord-clamp",
       "0011-stbi-idct-wide",
       "0012-dash-budget",
-      "0014-stbiw-jpg-unsigned-bits"
-||||||| parent of 8d74c83 (Patch 0013: skip exporting an empty stroke border (CI fuzz finding))
-      "0001-use-depth", "0002-loader-alloc-checks", "0003-stbtt-def-guard",
-      "0004-stroker-unused-point", "0005-stbiw-snprintf",
-      "0006-stbtt-no-pragmas", "0007-bsearch-const",
-      "0008-use-symbol-size", "0009-render-step-budget", "0010-ft-coord-clamp",
-      "0011-stbi-idct-wide", "0012-dash-budget"
-=======
-      "0001-use-depth", "0002-loader-alloc-checks", "0003-stbtt-def-guard",
-      "0004-stroker-unused-point", "0005-stbiw-snprintf",
-      "0006-stbtt-no-pragmas", "0007-bsearch-const",
-      "0008-use-symbol-size", "0009-render-step-budget", "0010-ft-coord-clamp",
-      "0011-stbi-idct-wide", "0012-dash-budget", "0013-stroker-empty-border"
->>>>>>> 8d74c83 (Patch 0013: skip exporting an empty stroke border (CI fuzz finding))
+      "0013-stroker-empty-border",
+      "0014-stbiw-jpg-unsigned-bits",
+      "0015-use-ancestor-cycle"
     )
   )
 })

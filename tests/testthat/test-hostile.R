@@ -66,3 +66,23 @@ test_that("a stroked polygon cut short after one point exports no border (0013)"
   txt <- '<svg xmlns="http://www.w3.org/2000/svg" width="32" hei0ght="32"><polygon points="16,2\'30,28 2,28" fill="#ffc914" stroke="#000"/></svg>'
   expect_s3_class(svg_render(txt, width = 64), "nativeRaster")
 })
+
+test_that("a <use> of its own ancestor is refused, not looped on (0015)", {
+  # The fuzzer's input: a symbol that uses itself. Before 0015 the parent
+  # chain became a loop and attribute inheritance never returned.
+  txt <- paste0(
+    '<svg xmlns="http://www.w3.org/" width="32" height="32"><defs>',
+    '<symbol id="s" viewBox ="00 10 10"><circle cx="#s" x="0" y="0" width="16" height="16"/>',
+    '<use href="#s" x="16" y="16" width="16" heigh="5" cy="5" r="4" fill="#da4167"/></symbol>',
+    '</defs><use href="#s" x="0" y="0" width="16" height="16"/>',
+    '<use href="#s" x="16" y="16" width="16" height="16"/></svg>'
+  )
+  elapsed <- system.time({
+    expect_type(svg_extents(txt), "double")
+    expect_s3_class(svg_render(txt, width = 32), "nativeRaster")
+  })[["elapsed"]]
+  expect_lt(elapsed, 5)
+  # A <use> of an enclosing group, too.
+  g <- svg_text('<g id="g"><rect width="4" height="4"/><use href="#g" x="5"/></g>')
+  expect_s3_class(svg_render(g), "nativeRaster")
+})

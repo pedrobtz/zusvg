@@ -2209,6 +2209,14 @@ static void render_use(const element_t* element, render_context_t* context, rend
     element_t* ref = resolve_href(context->document, element);
     if(ref == NULL)
         return;
+    /* A <use> of its own ancestor (or of itself) is a circular reference:
+     * rewriting ref->parent below would make the parent chain a loop, which
+     * attribute inheritance then walks forever. */
+    for(const element_t* p = element; p; p = p->parent) {
+        if(p == ref) {
+            return;
+        }
+    }
     length_t x = {0, length_type_fixed};
     length_t y = {0, length_type_fixed};
 
