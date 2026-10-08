@@ -31,8 +31,11 @@
 #'     rsvg's `rsvg_raw()` returns and magick's `image_read()` takes.
 #' @param max_pixels The most pixels the surface may have, at most
 #'   `2^29 - 1`, or `Inf` for that.
-#' @param quiet Reserved: will silence the warning for text that does not
-#'   render.
+#' @param quiet If `TRUE`, no warning is given for content that will not
+#'   render. Otherwise each call warns once for text
+#'   (`zusvg_text_skipped`) and once for clip paths that would change the
+#'   picture (`zusvg_clip_skipped`), each with the `count` affected; both
+#'   inherit `zusvg_warning`.
 #' @param ... Passed on to [svg_load()] when `x` is not already a document.
 #' @return The pixels, non-premultiplied, in the form `as` names. For
 #'   `as = "native"`, an integer matrix of class `nativeRaster` with
@@ -50,6 +53,21 @@ svg_render <- function(x, width = NULL, height = NULL, id = NULL, scale = 1,
                        max_pixels = 5e7, quiet = FALSE, ...) {
   call <- sys.call()
   as <- zsg_arg_choice(as, c("native", "array", "raw"), "as", call)
+  job <- zsg_prepare(x, width, height, id, scale, background, color, palette,
+                     max_pixels, quiet, ..., call = call)
+  r <- zsg_render_native(job$doc, job$size, job$box, job$bg, job$fg,
+                         id = job$id, pal = job$pal, call = call)
+  switch(as,
+    native = r,
+    array = .Call(zusvg_native_to_array, r),
+    raw = .Call(zusvg_native_to_raw, r)
+  )
+}
+
+# Everything a render needs, checked, with the warnings for what will not
+# render signalled once (design §6.4, D11, D15).
+zsg_prepare <- function(x, width, height, id, scale, background, color,
+                        palette, max_pixels, quiet, ..., call) {
   zsg_arg_id(id, call)
   pal <- zsg_arg_palette(palette, call)
   zsg_arg_flag(quiet, "quiet", call)
@@ -63,12 +81,51 @@ svg_render <- function(x, width = NULL, height = NULL, id = NULL, scale = 1,
       "element \"%s\" draws nothing, so it has no size to render at", id), call = call)
   }
   size <- zsg_render_size(box, width, height, scale, max_pixels, call)
-  r <- zsg_render_native(doc, size, box, bg, fg, id = id, pal = pal, call = call)
-  switch(as,
-    native = r,
-    array = .Call(zusvg_native_to_array, r),
-    raw = .Call(zusvg_native_to_raw, r)
-  )
+  if (!quiet) zsg_warn_unrendered(doc, id, call)
+  list(doc = doc, size = size, box = box, bg = bg, fg = fg, id = id, pal = pal)
+}
+
+zsg_warn <- function(class, message, ..., call = NULL) {
+  warning(structure(
+    class = c(class, "zusvg_warning", "warning", "condition"),
+    list(message = message, call = call, ...)
+  ))
+}
+
+# One warning per kind of content that will not render, for the part being
+# rendered: the whole document, or the subtree of `id`.
+zsg_warn_unrendered <- function(doc, id, call) {
+  e <- doc$elements
+  if (is.null(id)) {
+    n_text <- doc$n_text
+    n_clip <- as.double(sum(e$clip))
+  } else {
+    i <- zsg_element_index(doc, id)
+    n_text <- e$n_text[i]
+    inside <- zsg_in_subtree(e$parent, i)
+    n_clip <- as.double(sum(e$clip[inside]))
+  }
+  if (n_text > 0) {
+    zsg_warn("zusvg_text_skipped", sprintf(
+      "%s text element%s will not render: zusvg does not draw text",
+      zsg_num(n_text), if (n_text == 1) "" else "s"), count = n_text, call = call)
+  }
+  if (n_clip > 0) {
+    zsg_warn("zusvg_clip_skipped", sprintf(
+      "%s clip path%s will not be applied: plutosvg does not clip",
+      zsg_num(n_clip), if (n_clip == 1) "" else "s"), count = n_clip, call = call)
+  }
+}
+
+# Which elements are in the subtree rooted at element i (itself included).
+zsg_in_subtree <- function(parent, i) {
+  inside <- logical(length(parent))
+  inside[i] <- TRUE
+  for (k in seq_along(parent)) {
+    p <- parent[k]
+    if (!is.na(p) && inside[p]) inside[k] <- TRUE
+  }
+  inside
 }
 
 #' Extents of a document or element

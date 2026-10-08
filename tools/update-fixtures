@@ -17,7 +17,7 @@ source(file.path("tests", "testthat", "helper-render.R"))
 files <- sort(list.files(dir, pattern = "\\.svg$"))
 width <- 48
 rows <- lapply(files, function(f) {
-  r <- svg_render(svg_read(file.path(dir, f)), width = width)
+  r <- svg_render(svg_read(file.path(dir, f)), width = width, quiet = TRUE)
   data.frame(file = f, width = ncol(r), height = nrow(r), md5 = render_hash(r))
 })
 new <- do.call(rbind, rows)

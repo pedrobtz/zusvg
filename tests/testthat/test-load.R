@@ -20,7 +20,7 @@ test_that("a string is document text, never a path", {
 test_that("a string in another encoding is converted to UTF-8", {
   txt <- svg_text('<g id="café"/>')
   latin <- iconv(txt, "UTF-8", "latin1")
-  expect_identical(svg_load(latin)$elements$id, "café")
+  expect_identical(svg_elements(svg_load(latin))$id, "café")
 })
 
 test_that("an already loaded document is refused by svg_load()", {
@@ -59,9 +59,9 @@ test_that("elements plutosvg does not know load and are skipped with their subtr
     "<rect id='r'/>"
   )
   d <- svg_load(svg_text(body))
-  # Only built elements are listed: <svg> and the outer <rect>.
+  # Only built elements count: <svg> and the outer <rect>.
   expect_identical(d$n_elements, 2)
-  expect_identical(d$elements$id, "r")
+  expect_identical(svg_elements(d)$id, "r")
 })
 
 test_that("ids, tags and text-in-subtree are recorded for built elements", {
@@ -70,9 +70,10 @@ test_that("ids, tags and text-in-subtree are recorded for built elements", {
     "<symbol id='s'><path d='M0 0'/></symbol>"
   )
   d <- svg_load(svg_text(body))
-  expect_identical(d$elements$id, c("a", "b", "c", "s"))
-  expect_identical(d$elements$tag, c("g", "g", "rect", "symbol"))
-  expect_identical(d$elements$has_text, c(TRUE, FALSE, FALSE, FALSE))
+  e <- svg_elements(d)
+  expect_identical(e$id, c("a", "b", "c", "s"))
+  expect_identical(e$tag, c("g", "g", "rect", "symbol"))
+  expect_identical(e$has_text, c(TRUE, FALSE, FALSE, FALSE))
   expect_identical(d$n_text, 1)
 })
 
@@ -123,7 +124,7 @@ gzip_bytes <- function(txt) {
 test_that("gzip-compressed input is decompressed", {
   gz <- gzip_bytes(svg_text('<rect id="z"/>'))
   expect_identical(gz[1:2], as.raw(c(0x1f, 0x8b)))
-  expect_identical(svg_load(gz)$elements$id, "z")
+  expect_identical(svg_elements(svg_load(gz))$id, "z")
 })
 
 test_that("max_size bounds the decompressed size", {

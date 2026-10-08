@@ -3,7 +3,7 @@ test_that("svg_read() reads a file and loads it", {
   writeLines(svg_text('<rect id="a"/>'), path)
   d <- svg_read(path)
   expect_s3_class(d, "svg_document")
-  expect_identical(d$elements$id, "a")
+  expect_identical(svg_elements(d)$id, "a")
 })
 
 test_that("svg_read() passes the container size and the limits on", {
@@ -42,5 +42,5 @@ test_that("an .svgz file is decompressed", {
   con <- gzfile(path, "wb")
   writeLines(svg_text('<rect id="z"/>'), con)
   close(con)
-  expect_identical(svg_read(path)$elements$id, "z")
+  expect_identical(svg_elements(svg_read(path))$id, "z")
 })

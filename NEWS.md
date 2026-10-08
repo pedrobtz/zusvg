@@ -12,5 +12,9 @@
   `nativeRaster`, an RGBA array or raw RGBA bytes, with `currentColor` and
   CSS `var()` colours supplied from R; `svg_extents()` measures.
 * A `<use>` of a `<symbol>` is sized by the `<use>` (patch 0008).
+* `svg_png()` and `svg_jpeg()` encode a render, returning bytes or writing
+  a file or connection; `svg_elements()` lists a document's elements by
+  `id`. Text and clip paths that will not render warn once per call
+  (`zusvg_text_skipped`, `zusvg_clip_skipped`) unless `quiet = TRUE`.
 * `zusvg_info()` reports the bundled versions, their upstream tags and
   commits, and the patches.

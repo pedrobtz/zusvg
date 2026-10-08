@@ -354,6 +354,7 @@ Reasons where they are not in the section cited:
   - `0006-stbtt-no-pragmas`: the diagnostic-suppressing pragmas (§14).
   - `0007-bsearch-const`: in C23, `bsearch()` on a `const` table returns `const void *`, and the non-const result in `lookupid()` was a qualifier-discarding warning under R-devel's clang (found by the `clang23` CI leg).
   - `0008-use-symbol-size` (Stage 3): a `<use>`'s `width` and `height` size the `<symbol>` or `<svg>` it references (D17).
+  - `0014-stbiw-jpg-unsigned-bits` (Stage 4): the JPEG writer's bit buffer shifted as unsigned. UBSan in CI flagged a signed left-shift overflow on every JPEG encoded.
 
   Expected later:
   - from Stage 6, the one-line `STBIW_ZLIB_COMPRESS` prototype (§7);

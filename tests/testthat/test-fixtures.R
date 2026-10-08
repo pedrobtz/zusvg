@@ -6,7 +6,7 @@ test_that("every fixture renders to its pinned hash", {
   skip_on_cran()
   for (i in seq_len(nrow(hashes))) {
     h <- hashes[i, ]
-    r <- svg_render(svg_read(fixture(h$file)), width = as.numeric(h$width))
+    r <- svg_render(svg_read(fixture(h$file)), width = as.numeric(h$width), quiet = TRUE)
     expect_identical(dim(r), as.integer(c(h$height, h$width)), label = h$file)
     expect_identical(render_hash(r), h$md5, label = h$file)
   }
@@ -14,7 +14,7 @@ test_that("every fixture renders to its pinned hash", {
 
 test_that("fixtures render the pixels they are about", {
   px <- function(f, x, y, rgba) {
-    expect_pixel(svg_render(svg_read(fixture(f)), width = 32), x, y, rgba)
+    expect_pixel(svg_render(svg_read(fixture(f)), width = 32, quiet = TRUE), x, y, rgba)
   }
   px("rect.svg", 10, 10, c(0x2a, 0x7a, 0xb0, 255))
   px("rect.svg", 30, 30, c(0, 0, 0, 0))

@@ -96,21 +96,29 @@ zsg_load_bytes <- function(bytes, width, height, limits, call) {
                c(limits$max_size, limits$max_elements, limits$max_depth),
                limits$images)
   if (res$status != "ZSG_OK") zsg_raise_fault(res, limits, call)
-  structure(
+  elements <- data.frame(
+    id = res$ids, tag = res$tags, parent = res$parent, n_text = res$n_text_in,
+    stringsAsFactors = FALSE
+  )
+  attrs <- data.frame(
+    elem = res$attr_elem, name = res$attr_name, value = res$attr_value,
+    stringsAsFactors = FALSE
+  )
+  doc <- structure(
     list(
       ptr = res$ptr,
       width = res$width,
       height = res$height,
-      n_elements = res$n_elements,
+      n_elements = as.double(nrow(elements)),
       n_text = res$n_text,
       n_image = res$n_image,
-      elements = data.frame(
-        id = res$ids, tag = res$tags, has_text = res$has_text,
-        stringsAsFactors = FALSE
-      )
+      elements = elements,
+      attrs = attrs
     ),
     class = "svg_document"
   )
+  doc$elements$clip <- zsg_clip_effective(doc)
+  doc
 }
 
 # x as a live document: a loaded one as is, anything else through

@@ -99,41 +99,51 @@ SEXP zusvg_load(SEXP x, SEXP width, SEXP height, SEXP limits, SEXP images)
     }
 
     zsg_scan *s = &zd->scan;
-    R_xlen_t n_id = 0;
-    for (size_t i = 0; i < s->n; i++)
-        if (s->id_len[i] != (size_t) -1)
-            n_id++;
-    SEXP ids = PROTECT(Rf_allocVector(STRSXP, n_id));
-    SEXP tags = PROTECT(Rf_allocVector(STRSXP, n_id));
-    SEXP has_text = PROTECT(Rf_allocVector(LGLSXP, n_id));
-    R_xlen_t k = 0;
-    for (size_t i = 0; i < s->n; i++) {
-        if (s->id_len[i] == (size_t) -1)
-            continue;
-        SET_STRING_ELT(ids, k, Rf_mkCharLenCE(data + s->id_off[i],
-                                              (int) s->id_len[i], CE_UTF8));
-        SET_STRING_ELT(tags, k, Rf_mkChar(zsg_tag_name(s->tag[i])));
-        LOGICAL(has_text)[k] = s->has_text[i];
-        k++;
+    R_xlen_t ne = (R_xlen_t) s->n, na = (R_xlen_t) s->n_attr;
+    /* Elements: one row per element plutosvg built, in document order. */
+    SEXP ids = PROTECT(Rf_allocVector(STRSXP, ne));
+    SEXP tags = PROTECT(Rf_allocVector(STRSXP, ne));
+    SEXP parent = PROTECT(Rf_allocVector(INTSXP, ne));
+    SEXP n_text = PROTECT(Rf_allocVector(REALSXP, ne));
+    for (R_xlen_t i = 0; i < ne; i++) {
+        SET_STRING_ELT(ids, i, s->id_len[i] == (size_t) -1 ? NA_STRING :
+                       Rf_mkCharLenCE(data + s->id_off[i], (int) s->id_len[i], CE_UTF8));
+        SET_STRING_ELT(tags, i, Rf_mkChar(zsg_tag_name(s->tag[i])));
+        INTEGER(parent)[i] = s->parent[i] < 0 ? NA_INTEGER : s->parent[i] + 1;
+        REAL(n_text)[i] = (double) s->n_text_in[i];
+    }
+    /* Attributes: element (1-based), name, value. */
+    SEXP a_elem = PROTECT(Rf_allocVector(INTSXP, na));
+    SEXP a_name = PROTECT(Rf_allocVector(STRSXP, na));
+    SEXP a_value = PROTECT(Rf_allocVector(STRSXP, na));
+    for (R_xlen_t i = 0; i < na; i++) {
+        const zsg_attr *a = &s->attrs[i];
+        INTEGER(a_elem)[i] = (int) a->elem + 1;
+        SET_STRING_ELT(a_name, i, Rf_mkChar(zsg_attr_name(a->name)));
+        SET_STRING_ELT(a_value, i, Rf_mkCharLenCE(data + a->off, (int) a->len, CE_UTF8));
     }
 
     const char *names[] = {"status", "ptr", "width", "height", "start_tags",
-                           "n_elements", "n_text", "n_image", "ids", "tags",
-                           "has_text", ""};
+                           "n_text", "n_image", "ids", "tags", "parent",
+                           "n_text_in", "attr_elem", "attr_name", "attr_value",
+                           ""};
     SEXP out = PROTECT(Rf_mkNamed(VECSXP, names));
     SET_VECTOR_ELT(out, 0, Rf_mkString("ZSG_OK"));
     SET_VECTOR_ELT(out, 1, ptr);
     SET_VECTOR_ELT(out, 2, Rf_ScalarReal(plutosvg_document_get_width(zd->doc)));
     SET_VECTOR_ELT(out, 3, Rf_ScalarReal(plutosvg_document_get_height(zd->doc)));
     SET_VECTOR_ELT(out, 4, Rf_ScalarReal((double) s->start_tags));
-    SET_VECTOR_ELT(out, 5, Rf_ScalarReal((double) s->n));
-    SET_VECTOR_ELT(out, 6, Rf_ScalarReal((double) s->n_text));
-    SET_VECTOR_ELT(out, 7, Rf_ScalarReal((double) s->n_image));
-    SET_VECTOR_ELT(out, 8, ids);
-    SET_VECTOR_ELT(out, 9, tags);
-    SET_VECTOR_ELT(out, 10, has_text);
+    SET_VECTOR_ELT(out, 5, Rf_ScalarReal((double) s->n_text));
+    SET_VECTOR_ELT(out, 6, Rf_ScalarReal((double) s->n_image));
+    SET_VECTOR_ELT(out, 7, ids);
+    SET_VECTOR_ELT(out, 8, tags);
+    SET_VECTOR_ELT(out, 9, parent);
+    SET_VECTOR_ELT(out, 10, n_text);
+    SET_VECTOR_ELT(out, 11, a_elem);
+    SET_VECTOR_ELT(out, 12, a_name);
+    SET_VECTOR_ELT(out, 13, a_value);
     zsg_scan_free(s);
-    UNPROTECT(5);
+    UNPROTECT(9);
     return out;
 }
 

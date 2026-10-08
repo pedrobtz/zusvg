@@ -223,7 +223,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 4 — `svg_png()`, `svg_jpeg()`, `svg_elements()`, text warning · S
 
-**Status:** not started.
+**Status:** in review.
 
 **Do**
 
@@ -235,6 +235,17 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 **Exit**
 
 - PNG output is byte-identical across CI platforms; every §5 function exists.
+
+**What actually happened**
+
+- **The encoder renders into the same R-owned buffer.** It streams through plutovg's `write_to_*_stream()` into a growable `malloc()` buffer held by an external pointer, created before any plutovg object, so an R error after encoding cannot leak it. The write callback never calls R; it only flags an allocation failure.
+- **The pre-scan grew** for `svg_elements()` and D15:
+  - it returns every built element (tag, parent, id, the count of `<text>` in its subtree);
+  - it records a whitelist of attributes (`clip-path`, `style`, `x`, `y`, `width`, `height`, `viewBox`, `transform`, `clipPathUnits`).
+- **R judges whether a clip is a no-op.** It must hold one untransformed `<rect>` covering the root's `viewBox` (or `0 0 1 1` under `objectBoundingBox`). The lifecycle-badge clip from the survey is a no-op and does not warn.
+- **Warnings are counted for what is rendered.** With `id`, only that element's subtree counts. `count` is a field, and both classes inherit `zusvg_warning`.
+- **PNG bytes are pinned** in `test-encode.R` under `skip_on_cran()`.
+- **The first CI run's UBSan** found a signed left-shift overflow in stb_image_write's JPEG bit writer on every JPEG encoded. Patch `0014` does the arithmetic unsigned; the bytes are unchanged.
 
 ---
 

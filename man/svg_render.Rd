@@ -55,8 +55,11 @@ rsvg's \code{rsvg_raw()} returns and magick's \code{image_read()} takes.
 \item{max_pixels}{The most pixels the surface may have, at most
 \code{2^29 - 1}, or \code{Inf} for that.}
 
-\item{quiet}{Reserved: will silence the warning for text that does not
-render.}
+\item{quiet}{If \code{TRUE}, no warning is given for content that will not
+render. Otherwise each call warns once for text
+(\code{zusvg_text_skipped}) and once for clip paths that would change the
+picture (\code{zusvg_clip_skipped}), each with the \code{count} affected; both
+inherit \code{zusvg_warning}.}
 
 \item{...}{Passed on to \code{\link[=svg_load]{svg_load()}} when \code{x} is not already a document.}
 }
