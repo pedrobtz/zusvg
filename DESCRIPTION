@@ -1,6 +1,6 @@
 Package: zusvg
 Title: Render 'SVG' Images Without System Dependencies
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: c(
     person("Pedro", "Baltazar", , "pedrobtz@gmail.com", role = c("aut", "cre", "cph")),
     person("Samuel", "Ugochukwu", role = "cph",
@@ -10,12 +10,12 @@ Authors@R: c(
     person("Sean", "Barrett", role = "cph",
            comment = "stb_image, stb_image_write and stb_truetype in src/vendor/plutovg")
   )
-Description: Renders 'SVG' documents to native rasters, 'RGBA' arrays and
-    'PNG' or 'JPEG' files with bundled copies of the 'plutosvg' and
-    'plutovg' C libraries, so it installs from source with no system
-    library and draws the same pixels on every platform. Aimed at icons and
-    logos: text, filters, masks, patterns, markers and 'CSS' style sheets
-    are not rendered.
+Description: Renders 'SVG' documents to native rasters, red-green-blue-alpha
+    arrays and 'PNG' or 'JPEG' files with bundled copies of the 'plutosvg'
+    and 'plutovg' C libraries, so it installs from source with no system
+    library and draws the same pixels on every platform. It is meant for
+    icons and logos: text, filters, masks, patterns, markers, clip paths and
+    'CSS' style sheets are not rendered.
 License: MIT + file LICENSE
 Copyright: file inst/COPYRIGHTS
 URL: https://pedrobtz.github.io/zusvg/, https://github.com/pedrobtz/zusvg

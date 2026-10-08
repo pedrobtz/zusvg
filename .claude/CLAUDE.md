@@ -13,13 +13,7 @@ It is a member of the `zu*` family (sibling checkouts in `../`), the first whose
 
 ## Current state
 
-**2026-10-08: Stage 0 is done (#11); Stage 1 is next.** Stage 0 delivered the following, and every other export arrives from Stage 1:
-- plutosvg 0.0.8 and plutovg 1.3.3, vendored with seven patches;
-- `tools/update-plutosvg`, `verify-vendor`, `check-symbols` and `check-use-chain`;
-- `zusvg_info()`;
-- `vendor.yaml` and `vendor-upstream.yaml`.
-
-`devtools::check(cran = TRUE)` is 0/0/0, and every CI leg is green, including Windows and the C23 `clang23` container. The feature survey is in design §3: the audience is icons and logos, and clip paths warn for 0.1.0 (D15). Tracking: parent #2, stages #3–#10 (#3 closed).
+**2026-10-08: 0.1.0 is ready except for one blocker.** Stages 0–6 are done, and Stage 7's preparation is done (vignette, README, pkgdown, `cran-comments.md`, `Version: 0.1.0`). The blocker: zufast must be on CRAN before `Remotes:` can be removed and the package submitted. Thirteen patches are applied to the vendored libraries (`tools/patches/`); design §16 records the benchmarks, and the roadmap's Stage 7 table records the §19 acceptance criteria. Tracking: parent #2.
 
 Update this paragraph at the end of every stage.
 

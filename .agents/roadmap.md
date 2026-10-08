@@ -331,10 +331,11 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 - The README is rewritten; `_pkgdown.yml` has a reference index; `inst/WORDLIST` holds 17 words; `cran-comments.md` lists the CI legs.
 - `devtools::check(cran = TRUE)` is 0/0/0 with the vignette built.
 
+- `Version: 0.1.0` and the NEWS heading are set. The `review-cran-submission` review was run: an `--as-cran` check of the built tarball shows only the zufast blocker and the new-submission notice, the URLs check clean, and the spelling is clean.
+
 **Left for the submission** (each needs zufast on CRAN):
 
 - remove `Remotes:` and rebuild against zufast's CRAN tarball;
-- set `Version: 0.1.0` and the NEWS heading;
 - run `--as-cran --run-donttest`, then the `cran-extrachecks` and `review-cran-submission` skills;
 - submit, then tag.
 
