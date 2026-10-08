@@ -281,11 +281,21 @@ zsg_render_native <- function(doc, size, box, bg, fg, call, id = NULL,
     ZSG_OK = NULL,
     ZSG_ERR_NOMEM = zsg_abort("zusvg_memory_error", sprintf(
       "could not create a %s by %s surface", zsg_num(w), zsg_num(h)), call = call),
-    ZSG_ERR_RENDER = zsg_abort("zusvg_render_error",
-      "plutosvg could not render the document", call = call),
+    ZSG_ERR_RENDER = zsg_steps_error(call),
     zsg_invalid_argument("x", "`x` is not a live document.", call)
   )
   class(buf) <- "nativeRaster"
   attr(buf, "channels") <- 4L
   buf
+}
+
+# plutosvg's render returns false only when it ran out of its budget of
+# element visits (patch 0009; design §12): the id was checked before.
+zsg_render_steps <- 1e6
+
+zsg_steps_error <- function(call) {
+  zsg_abort("zusvg_limit_error", sprintf(
+    "the render visited more than %s elements and was stopped: a <use> fan-out?",
+    zsg_num(zsg_render_steps)),
+    limit = "render_steps", limit_value = zsg_render_steps, call = call)
 }

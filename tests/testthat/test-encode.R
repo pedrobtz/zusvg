@@ -70,7 +70,7 @@ test_that("a failed render, encode buffer or surface is a classed error", {
   expect_zusvg_error(zusvg:::zsg_encode(icon(), NULL, 0L, 0L, call = NULL, fail = 1L),
                      "zusvg_memory_error")
   expect_zusvg_error(zusvg:::zsg_encode(icon(), NULL, 0L, 0L, call = NULL, fail = 2L),
-                     "zusvg_render_error")
+                     "zusvg_limit_error", limit = "render_steps")
   expect_zusvg_error(zusvg:::zsg_encode(icon(), NULL, 0L, 0L, call = NULL, fail = 3L),
                      "zusvg_memory_error")
 })

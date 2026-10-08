@@ -1658,7 +1658,13 @@ typedef struct {
     plutosvg_palette_func_t palette_func;
     void* closure;
     int depth;
+    long steps;
 } render_context_t;
+
+/* Every render_element() call counts one step; a render stops after
+ * MAX_RENDER_STEPS, so a <use> fan-out that multiplies the work at each
+ * level cannot run without bound. */
+#define MAX_RENDER_STEPS 1000000L
 
 static float resolve_length(const render_state_t* state, const length_t* length, char mode)
 {
@@ -2586,6 +2592,8 @@ static void render_image(const element_t* element, render_context_t* context, re
 
 static void render_element(const element_t* element, render_context_t* context, render_state_t* state)
 {
+    if(++context->steps > MAX_RENDER_STEPS)
+        return;
     switch(element->id) {
     case TAG_SVG:
         render_svg(element, context, state);
@@ -2654,9 +2662,9 @@ bool plutosvg_document_render(const plutosvg_document_t* document, const char* i
         state.element = element;
     }
 
-    render_context_t context = {document, canvas, current_color, palette_func, closure, 0};
+    render_context_t context = {document, canvas, current_color, palette_func, closure, 0, 0};
     render_element(state.element, &context, &state);
-    return true;
+    return context.steps <= MAX_RENDER_STEPS;
 }
 
 plutovg_surface_t* plutosvg_document_render_to_surface(const plutosvg_document_t* document, const char* id, int width, int height, const plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure)
@@ -2724,7 +2732,7 @@ bool plutosvg_document_extents(const plutosvg_document_t* document, const char* 
         state.element = element;
     }
 
-    render_context_t context = {document, NULL, NULL, NULL, NULL, 0};
+    render_context_t context = {document, NULL, NULL, NULL, NULL, 0, 0};
     render_element(state.element, &context, &state);
     if(IS_INVALID_RECT(state.extents)) {
         *extents = EMPTY_RECT;

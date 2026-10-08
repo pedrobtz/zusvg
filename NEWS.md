@@ -1,6 +1,6 @@
 # zusvg 0.0.0.9000
 
-* Bundles plutosvg 0.0.8 and plutovg 1.3.3 with seven local patches. `<use>`
+* Bundles plutosvg 0.0.8 and plutovg 1.3.3 with twelve local patches. `<use>`
   hops now count against the 256-level render depth. The loader fails
   cleanly when an allocation fails. Five smaller patches remove what R CMD
   check would report: three compiler warnings (one only in C23), a
@@ -16,5 +16,9 @@
   a file or connection; `svg_elements()` lists a document's elements by
   `id`. Text and clip paths that will not render warn once per call
   (`zusvg_text_skipped`, `zusvg_clip_skipped`) unless `quiet = TRUE`.
+* Hostile input is bounded: a render stops after a million element visits
+  (`zusvg_limit_error`, `limit = "render_steps"`), a dashed path after a
+  million segments, and embedded images larger than 4096 pixels a side are
+  not decoded. Patches 0009 to 0012 fix what the fuzzer found.
 * `zusvg_info()` reports the bundled versions, their upstream tags and
   commits, and the patches.

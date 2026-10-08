@@ -251,7 +251,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 5 — Fuzz target, mutation check, hardening CI · M
 
-**Status:** not started.
+**Status:** in review.
 
 **Do**
 
@@ -262,6 +262,20 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 **Exit**
 
 - The canary has crashed; the PR fuzz budget is clean; every guard has a mutation case; `hardening.yaml` green; §18 Q2 decided and recorded.
+
+**What actually happened**
+
+- **The fuzzer found four defects in its first fifteen minutes**, each now a patch and a test in `test-hostile.R`:
+  - undefined behaviour from an out-of-range coordinate, and from a stroke in a document scaled by `1e16` (`0010`);
+  - signed overflow in stb_image's JPEG IDCT (`0011`);
+  - a dash explosion that ran out of memory, and in single precision never ended (`0012`).
+
+  A JPEG declaring 7 900 by 32 500 pixels in one kilobyte timed out; `STBI_MAX_DIMENSIONS=4096` caps it (D19). After those fixes, 20 minutes ran clean locally.
+- **§18 Q2 is decided** (D18): one million element visits per render (`0009`). A two-kilobyte fan-out now fails in milliseconds as `zusvg_limit_error` (`limit = "render_steps"`).
+- **`STBI_NO_SIMD`.** x86-64 used SSE2 and arm64 the scalar IDCT; now every platform decodes embedded JPEGs the same way, with the patched code.
+- **The harness has a differential invariant.** An input the pre-scan refuses as malformed must be refused by the loader too, which checks the port of the tokenizer continuously.
+- **The mutation check covers R as well as C.** It covers the four pre-scan guards through `fuzz/probe.c`, and the four R guards (`max_size` twice, `dimension`, `max_pixels`) through a mutated copy of the package.
+- **`hardening.yaml` is hand-rolled**, as in zucbor, rather than r-actions' `fuzz.yml`, so that the canary runs first and the `-D` set is checked against `src/Makevars` (`tools/fuzz-env`).
 
 ---
 

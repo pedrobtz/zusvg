@@ -2428,7 +2428,7 @@ stbi_inline static stbi_uc stbi__clamp(int x)
 
 // derived from jidctint -- DCT_ISLOW
 #define STBI__IDCT_1D(s0,s1,s2,s3,s4,s5,s6,s7) \
-   int t0,t1,t2,t3,p1,p2,p3,p4,p5,x0,x1,x2,x3; \
+   long long t0,t1,t2,t3,p1,p2,p3,p4,p5,x0,x1,x2,x3; \
    p2 = s2;                                    \
    p3 = s6;                                    \
    p1 = (p2+p3) * stbi__f2f(0.5411961f);       \

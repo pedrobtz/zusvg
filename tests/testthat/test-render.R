@@ -90,7 +90,7 @@ test_that("a failed surface or render is a classed error", {
   }
   expect_s3_class(render(0L), "nativeRaster")
   expect_zusvg_error(render(1L), "zusvg_memory_error")
-  expect_zusvg_error(render(2L), "zusvg_render_error")
+  expect_zusvg_error(render(2L), "zusvg_limit_error", limit = "render_steps")
 })
 
 test_that("grid and graphics draw the raster without conversion", {

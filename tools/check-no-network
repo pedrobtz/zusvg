@@ -1,0 +1,13 @@
+#!/bin/sh
+# No test may touch the network: asserted, not assumed. Fails on any call in
+# tests/ that opens a URL or a socket.
+set -eu
+# R code only: SVG fixtures and test strings say url(#id), which is not a
+# network call.
+hits=$(grep -rnE --include='*.R' '(^|[^-#a-zA-Z_.:])url\([[:space:]]*["'"'"'](https?|ftps?)://|download\.file|curl::|httr|socketConnection|make\.socket|(readLines|readBin|svg_read|file)\([^)]*["'"'"'](https?|ftps?)://' tests/ || true)
+if [ -n "$hits" ]; then
+  echo "FAIL: tests appear to use the network:" >&2
+  echo "$hits" >&2
+  exit 1
+fi
+echo "==> no network use in tests/"

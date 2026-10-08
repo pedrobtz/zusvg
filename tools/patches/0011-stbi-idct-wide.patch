@@ -1,0 +1,24 @@
+Subject: Compute the scalar JPEG IDCT in 64-bit integers
+
+STBI__IDCT_1D() sums products of dequantized coefficients and 12-bit
+fixed-point constants in int. Coefficients a crafted JPEG chooses overflow
+it -- signed overflow, undefined behaviour, found by zusvg's fuzzer through
+an embedded data: image. Declaring the macro's intermediates long long
+makes the arithmetic defined; the results stored back into int are the
+same for every input that did not overflow before.
+
+zusvg compiles with STBI_NO_SIMD, so this is the IDCT every platform runs.
+
+zusvg: .agents/design.md §9. Offered upstream.
+
+--- a/plutovg/source/plutovg-stb-image.h
++++ b/plutovg/source/plutovg-stb-image.h
+@@ -2428,7 +2428,7 @@
+ 
+ // derived from jidctint -- DCT_ISLOW
+ #define STBI__IDCT_1D(s0,s1,s2,s3,s4,s5,s6,s7) \
+-   int t0,t1,t2,t3,p1,p2,p3,p4,p5,x0,x1,x2,x3; \
++   long long t0,t1,t2,t3,p1,p2,p3,p4,p5,x0,x1,x2,x3; \
+    p2 = s2;                                    \
+    p3 = s6;                                    \
+    p1 = (p2+p3) * stbi__f2f(0.5411961f);       \

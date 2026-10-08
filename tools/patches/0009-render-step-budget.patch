@@ -1,0 +1,61 @@
+Subject: Bound the work of one render at MAX_RENDER_STEPS element visits
+
+A <use> fan-out -- a group using one symbol ten times, inside a symbol
+used ten times, and so on -- multiplies the drawing work by ten per level
+while the document grows by a few lines: twenty levels in a kilobyte draw
+10^20 shapes, and nothing interrupts plutosvg_document_render(). The depth
+caps bound nesting, not breadth.
+
+Count each render_element() call in the render context and stop at
+MAX_RENDER_STEPS (one million). plutosvg_document_render() returns false
+when the budget ran out, so the caller can tell a truncated picture from a
+complete one; plutosvg_document_extents() returns what it measured.
+
+zusvg: .agents/design.md §12, §18 Q2. Offered upstream.
+
+--- a/plutosvg/source/plutosvg.c
++++ b/plutosvg/source/plutosvg.c
+@@ -1658,7 +1658,13 @@
+     plutosvg_palette_func_t palette_func;
+     void* closure;
+     int depth;
++    long steps;
+ } render_context_t;
++
++/* Every render_element() call counts one step; a render stops after
++ * MAX_RENDER_STEPS, so a <use> fan-out that multiplies the work at each
++ * level cannot run without bound. */
++#define MAX_RENDER_STEPS 1000000L
+ 
+ static float resolve_length(const render_state_t* state, const length_t* length, char mode)
+ {
+@@ -2586,6 +2592,8 @@
+ 
+ static void render_element(const element_t* element, render_context_t* context, render_state_t* state)
+ {
++    if(++context->steps > MAX_RENDER_STEPS)
++        return;
+     switch(element->id) {
+     case TAG_SVG:
+         render_svg(element, context, state);
+@@ -2654,9 +2662,9 @@
+         state.element = element;
+     }
+ 
+-    render_context_t context = {document, canvas, current_color, palette_func, closure, 0};
++    render_context_t context = {document, canvas, current_color, palette_func, closure, 0, 0};
+     render_element(state.element, &context, &state);
+-    return true;
++    return context.steps <= MAX_RENDER_STEPS;
+ }
+ 
+ plutovg_surface_t* plutosvg_document_render_to_surface(const plutosvg_document_t* document, const char* id, int width, int height, const plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure)
+@@ -2724,7 +2732,7 @@
+         state.element = element;
+     }
+ 
+-    render_context_t context = {document, NULL, NULL, NULL, NULL, 0};
++    render_context_t context = {document, NULL, NULL, NULL, NULL, 0, 0};
+     render_element(state.element, &context, &state);
+     if(IS_INVALID_RECT(state.extents)) {
+         *extents = EMPTY_RECT;

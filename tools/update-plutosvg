@@ -121,7 +121,8 @@ src/Makevars, with the reason for each there: PLUTOVG_BUILD_STATIC and
 PLUTOSVG_BUILD_STATIC (never the *_BUILD macros, which export the API past
 \$(C_VISIBILITY)); STBIDEF, STBIWDEF and STBTT_DEF set to extern (hidden);
 PLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD; STBI_NO_* for every image format but
-PNG and JPEG; STBI_NO_THREAD_LOCALS; HAVE_THREADS_H and
+PNG and JPEG; STBI_NO_THREAD_LOCALS; STBI_NO_SIMD; STBI_MAX_DIMENSIONS=4096;
+HAVE_THREADS_H and
 PLUTOSVG_HAS_FREETYPE undefined. R's -DNDEBUG removes the vendored
 assert()s in an installed build.
 
