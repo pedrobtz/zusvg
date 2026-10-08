@@ -205,6 +205,7 @@ Facts read from the source that shape the design:
 - **Images.** `<image href>` resolves only base64 `data:image/png`, `data:image/jpg` and `data:image/jpeg` URIs (`plutosvg.c:2460-2467`), decoded by plutovg's vendored `stb_image` 2.30 (`STBI_rgb_alpha`), whose JPEG and PNG decoders have a history of CVEs. zusvg compiles with `-DSTBI_NO_BMP -DSTBI_NO_PSD -DSTBI_NO_TGA -DSTBI_NO_GIF -DSTBI_NO_HDR -DSTBI_NO_PIC -DSTBI_NO_PNM`, which `stb_image` honours from the compiler line without editing the file (each is `#ifdef`-tested). `images = FALSE` makes the pre-scan refuse any `<image` element before decoding. `STBI_NO_STDIO` and `STBI_WRITE_NO_STDIO` must not be set, because `plutovg-surface.c` calls the stdio entry points and would not compile. `STBI_NO_THREAD_LOCALS` is set. Under emulated thread-local storage (GCC on macOS, MinGW on Windows), stb_image's thread-local failure reason links libgcc's `__emutls_*` helpers, which reference `abort()` and are exported from the shared object (*found at Stage 0*). The fuzz corpus includes embedded images.
 - **Surfaces.** `plutovg_surface_create()` refuses a dimension at or above 32768 (`kMaxSize = 1 << 15`) and returns `NULL` on `malloc()` failure, which zusvg reports as `zusvg_memory_error`. It has no overflow check on `height * stride` (*read 2026-10-08*, correcting the RFC's reading of the 1.3.3 notes); §6.1 says how zusvg keeps sizes inside it.
 - **`<use>` of a `<symbol>` ignored the `<use>`'s size** (*found at Stage 2*; patch `0008` fixes it, D17). `render_use()` passes only `x` and `y`. `render_svg()` then sizes a `<symbol>` from the symbol's own `width` and `height`, which default to 100% of the viewport, never from the `<use>`. An icon sprite sheet's `<use href="#icon" width="24" height="24"/>` therefore draws the icon viewport-sized. The `use-symbol` fixture pins it; §18 Q10.
+- **Group opacity** (*found at Stage 6*, against rsvg): plutosvg applies an element's `opacity` to each child as it draws it, not to the group composited first, so overlapping children inside a semi-transparent group show through each other. The `opacity` fixture pins it, and the rsvg cross-check bounds it.
 - **Clip paths.** `TAG_CLIP_PATH` carries a `TODO`, and nothing in the renderer reads `clip-path` (*read 2026-10-08*). §2 and D15.
 - **Fonts.** plutovg's `plutovg-font.c` carries `stb_truetype`, a font face cache, a mutex and a system font directory scan. The file cannot be left out, because `plutovg-canvas.c` calls into it. plutosvg never calls any font function. The mutex is a `CRITICAL_SECTION` under `_WIN32` (with `windows.h`), C11 `mtx_t` under `HAVE_THREADS_H`, and a no-op otherwise. zusvg does not define `HAVE_THREADS_H`, and it defines `PLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD`, which compiles out the directory scan and its `mmap()` and `dirent` use, so nothing reads the file system. The symbols are hidden with the rest.
 - **Standard and libraries.** plutosvg builds as C99 and plutovg as C11 (`gnu11` in its Meson file); both need `-lm` and nothing else. R's default C standard is C17 or later, so `src/Makevars` sets nothing.
@@ -318,6 +319,18 @@ Measured by `tools/run-benchmarks` against `rsvg` and `magick` where installed, 
 - Loading and rendering a 2 KB icon at 64 by 64: under 100 µs, which is the cost that matters for a sheet of a thousand icons.
 - A 500 KB map at 2000 by 2000: within 3× of `rsvg`. plutovg is a scanline rasteriser without SIMD; parity is not the target.
 - `nativeRaster` output adds no copy beyond the ARGB-to-ABGR pass; `"array"` costs the 8× expansion to doubles and is the slow path.
+
+**Recorded at Stage 6** (2026-10-08). The machine was macOS arm64 (Apple M-series), R 4.6.1, with zusvg installed by `R CMD INSTALL` at `-O2`, against rsvg 2.7.0 and magick. These are `tools/run-benchmarks` medians:
+
+| Case | zusvg | rsvg | magick |
+|---|---|---|---|
+| Lucide-style icon (312 bytes, strokes) at 64 by 64, loaded document | 71 µs | 112 µs | 238 µs |
+| the same, from text (load and render) | 102 µs | | |
+| dense icon (40 random curves) at 64 by 64 | 175 µs | 359 µs | |
+| 500 KB map (1 719 polygons) at 2000 by 2000 | 99 ms | 158 ms | 216 ms |
+| a thousand icons at 64 by 64 (§19 criterion 6) | 0.073 s loaded, 0.095 s from text | | |
+
+The four survey icons (Lucide, Material, Font Awesome, Bootstrap "home") load in 19 µs and render in 38–59 µs. Loading first took 300 µs, most of it building data frames for the element table; plain lists fixed that. The map target was 3× rsvg's time; zusvg takes 0.63× of it.
 
 ---
 

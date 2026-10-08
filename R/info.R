@@ -10,6 +10,11 @@
 #'   * `patches`: identifiers of the local patches applied to the bundled
 #'     copies, in order (see `src/vendor/PROVENANCE`).
 #'   * `image_formats`: the embedded image formats the bundled decoder reads.
+#'   * `png_compression`: what compresses PNG output: `"stb_image_write"`,
+#'     the bundled encoder's own deflate.
+#'   * `limits`: the default limits of [svg_load()] and [svg_render()], and
+#'     the fixed ones: `render_steps` element visits per render, and the
+#'     largest embedded image side, `image_dimension`.
 #'   * `smoke_ok`: `TRUE` if the bundled libraries load and render a known
 #'     document correctly.
 #' @export
@@ -36,6 +41,11 @@ zusvg_info <- function() {
       ),
       patches = patches,
       image_formats = c("png", "jpeg"),
+      png_compression = "stb_image_write",
+      limits = list(
+        max_size = 64 * 1024^2, max_elements = 1e5, max_depth = 256,
+        max_pixels = 5e7, render_steps = zsg_render_steps, image_dimension = 4096
+      ),
       smoke_ok = info$smoke_ok
     ),
     class = "zusvg_info"
@@ -55,7 +65,9 @@ format.zusvg_info <- function(x, ...) {
       "patches:   ",
       if (length(x$patches)) paste(x$patches, collapse = ", ") else "none"
     ),
-    paste0("images:    ", paste(x$image_formats, collapse = ", ")),
+    paste0("images:    ", paste(x$image_formats, collapse = ", "),
+           " (at most ", x$limits$image_dimension, " pixels a side)"),
+    paste0("png:       ", x$png_compression),
     paste0("self-test: ", if (isTRUE(x$smoke_ok)) "ok" else "FAILED")
   )
 }

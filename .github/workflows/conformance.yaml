@@ -1,0 +1,79 @@
+# Roadmap Stage 6 (.agents/design.md §8, §15, §16):
+#
+#   hashes      every fixture renders to its pinned hash on Linux, macOS and
+#               Windows, x86-64 and arm64: the determinism claim
+#   rsvg        every fixture within tools/conformance.tsv's bound of rsvg
+#   benchmarks  zusvg against rsvg on an optimised build; informational
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+name: conformance
+
+permissions:
+  contents: read
+
+jobs:
+  hashes:
+    runs-on: ${{ matrix.os }}
+    name: hashes (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          dependencies: '"hard"'
+          extra-packages: any::pkgload
+      - name: Render every fixture and compare with hashes.tsv
+        run: Rscript tools/update-fixtures
+
+  rsvg:
+    runs-on: ubuntu-latest
+    name: rsvg cross-check
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install librsvg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-dev
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          dependencies: '"hard"'
+          extra-packages: any::pkgload, any::rsvg
+      - run: Rscript tools/run-conformance
+
+  benchmarks:
+    runs-on: ubuntu-latest
+    name: benchmarks (informational)
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install librsvg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-dev
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          dependencies: '"hard"'
+          extra-packages: any::bench, any::rsvg
+      - name: Install and benchmark
+        run: |
+          mkdir -p "$RUNNER_TEMP/lib"
+          R CMD INSTALL -l "$RUNNER_TEMP/lib" .
+          R_LIBS="$RUNNER_TEMP/lib" Rscript tools/run-benchmarks

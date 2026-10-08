@@ -1,0 +1,11 @@
+fixture	max_mean	reason
+default	1	anti-aliasing only: shapes must agree
+clip-path.svg	Inf	plutosvg 0.0.8 does not apply clip paths (design D15)
+text.svg	Inf	zusvg does not draw text (design D3)
+var-palette.svg	Inf	CSS var() with zusvg's palette semantics
+opacity.svg	3	plutosvg applies group opacity to each child, not to the composited group (design §9)
+linear-gradient-pad.svg	6	stop-opacity interpolated premultiplied by plutovg, unpremultiplied by librsvg
+linear-gradient-reflect.svg	13	as linear-gradient-pad
+linear-gradient-repeat.svg	13	as linear-gradient-pad
+image-png.svg	6	embedded image upscaled without smoothing by plutovg
+image-jpeg.svg	10	as image-png, and a different JPEG decoder

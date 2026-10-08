@@ -61,19 +61,19 @@ zsg_element_index <- function(doc, id) {
 zsg_clip_effective <- function(doc) {
   e <- doc$elements
   a <- doc$attrs
-  n <- nrow(e)
+  n <- length(e$id)
   out <- logical(n)
-  if (n == 0L) return(out)
+  # The clip-path references: the attribute, or a style declaration.
+  is_cp <- a$name == "clip-path"
+  is_st <- a$name == "style" & grepl("clip-path", a$value, fixed = TRUE)
+  if (n == 0L || !any(is_cp | is_st)) return(out)
   val <- function(i, name) {
     v <- a$value[a$elem == i & a$name == name]
     if (length(v)) v[length(v)] else NA_character_
   }
-  # The clip-path references: the attribute, or a style declaration.
   refs <- rep(NA_character_, n)
-  cp <- a[a$name == "clip-path", ]
-  refs[cp$elem] <- cp$value
-  st <- a[a$name == "style" & grepl("clip-path", a$value, fixed = TRUE), ]
-  refs[st$elem] <- sub(".*clip-path\\s*:\\s*([^;]*).*", "\\1", st$value)
+  refs[a$elem[is_cp]] <- a$value[is_cp]
+  refs[a$elem[is_st]] <- sub(".*clip-path\\s*:\\s*([^;]*).*", "\\1", a$value[is_st])
   target <- sub("^\\s*url\\(\\s*['\"]?#([^)'\"]+)['\"]?\\s*\\)\\s*$", "\\1", refs)
   target[!grepl("^\\s*url\\(", refs)] <- NA_character_
 
