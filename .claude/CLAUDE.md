@@ -13,7 +13,7 @@ It is a member of the `zu*` family (sibling checkouts in `../`), the first whose
 
 ## Current state
 
-**2026-10-08: 0.1.0 is ready except for one blocker.** Stages 0–6 are done, and Stage 7's preparation is done (vignette, README, pkgdown, `cran-comments.md`, `Version: 0.1.0`). The blocker: zufast must be on CRAN before `Remotes:` can be removed and the package submitted. Thirteen patches are applied to the vendored libraries (`tools/patches/`); design §16 records the benchmarks, and the roadmap's Stage 7 table records the §19 acceptance criteria. Tracking: parent #2.
+**2026-10-08: 0.1.0 is ready except for one blocker.** Stages 0–6 are merged (#11, #15–#20), and Stage 7's preparation is too (#21): vignette, README, pkgdown, `cran-comments.md`, `Version: 0.1.0`. The blocker: zufast must be on CRAN before `Remotes:` can be removed and the package submitted (#10 stays open for that). Sixteen patches are applied to the vendored libraries (`tools/patches/`). Design §16 records the benchmarks, and the roadmap's Stage 7 table records the §19 acceptance criteria. Tracking: parent #2.
 
 Update this paragraph at the end of every stage.
 
