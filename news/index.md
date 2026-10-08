@@ -36,6 +36,8 @@
   after a million segments, and embedded images larger than 4096 pixels
   a side are not decoded. Patches 0009 to 0013 fix what the fuzzer
   found.
+- A 64 by 64 icon loads and renders in about 0.1 ms; see
+  `tools/run-benchmarks`.
 - [`zusvg_info()`](https://pedrobtz.github.io/zusvg/reference/zusvg_info.md)
   reports the bundled versions, their upstream tags and commits, and the
   patches.

@@ -22,6 +22,16 @@ A list of class `zusvg_info` with elements:
 
 - `image_formats`: the embedded image formats the bundled decoder reads.
 
+- `png_compression`: what compresses PNG output: `"stb_image_write"`,
+  the bundled encoder's own deflate.
+
+- `limits`: the default limits of
+  [`svg_load()`](https://pedrobtz.github.io/zusvg/reference/svg_load.md)
+  and
+  [`svg_render()`](https://pedrobtz.github.io/zusvg/reference/svg_render.md),
+  and the fixed ones: `render_steps` element visits per render, and the
+  largest embedded image side, `image_dimension`.
+
 - `smoke_ok`: `TRUE` if the bundled libraries load and render a known
   document correctly.
 
@@ -33,6 +43,7 @@ zusvg_info()
 #> plutosvg:  0.0.8 (v0.0.8, fd8a080b3d0b)
 #> plutovg:   1.3.3 (v1.3.3, bbd91f0d06a7)
 #> patches:   0001-use-depth, 0002-loader-alloc-checks, 0003-stbtt-def-guard, 0004-stroker-unused-point, 0005-stbiw-snprintf, 0006-stbtt-no-pragmas, 0007-bsearch-const, 0008-use-symbol-size, 0009-render-step-budget, 0010-ft-coord-clamp, 0011-stbi-idct-wide, 0012-dash-budget, 0013-stroker-empty-border, 0014-stbiw-jpg-unsigned-bits, 0015-use-ancestor-cycle, 0016-blend-defined-casts
-#> images:    png, jpeg
+#> images:    png, jpeg (at most 4096 pixels a side)
+#> png:       stb_image_write
 #> self-test: ok
 ```

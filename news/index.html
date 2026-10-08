@@ -43,6 +43,7 @@
 <li>
 <code><a href="../reference/svg_png.html">svg_png()</a></code> and <code><a href="../reference/svg_png.html">svg_jpeg()</a></code> encode a render, returning bytes or writing a file or connection; <code><a href="../reference/svg_elements.html">svg_elements()</a></code> lists a document’s elements by <code>id</code>. Text and clip paths that will not render warn once per call (<code>zusvg_text_skipped</code>, <code>zusvg_clip_skipped</code>) unless <code>quiet = TRUE</code>.</li>
 <li>Hostile input is bounded: a render stops after a million element visits (<code>zusvg_limit_error</code>, <code>limit = "render_steps"</code>), a dashed path after a million segments, and embedded images larger than 4096 pixels a side are not decoded. Patches 0009 to 0013 fix what the fuzzer found.</li>
+<li>A 64 by 64 icon loads and renders in about 0.1 ms; see <code>tools/run-benchmarks</code>.</li>
 <li>
 <code><a href="../reference/zusvg_info.html">zusvg_info()</a></code> reports the bundled versions, their upstream tags and commits, and the patches.</li>
 </ul></div>
