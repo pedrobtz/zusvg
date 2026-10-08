@@ -313,7 +313,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 7 — pkgdown site, vignette, CRAN · S
 
-**Status:** not started. Waits for zufast on CRAN.
+**Status:** preparation in review; submission blocked until zufast is on CRAN (2026-10-08: zufast is untagged and unsubmitted).
 
 **Do**
 
@@ -324,6 +324,31 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 - Submit. After acceptance: tag `v0.1.0`, GitHub release, bump to `0.1.0.9000`, close the parent issue.
 
 **Exit:** on CRAN.
+
+**Done in the preparation pull request**
+
+- The vignette *Icons, logos and annotations with zusvg* covers an icon, an icon sheet, palette recolouring, a ggplot2 annotation, PNG output with a Shiny pattern, untrusted input, and what does not render.
+- The README is rewritten; `_pkgdown.yml` has a reference index; `inst/WORDLIST` holds 17 words; `cran-comments.md` lists the CI legs.
+- `devtools::check(cran = TRUE)` is 0/0/0 with the vignette built.
+
+**Left for the submission** (each needs zufast on CRAN):
+
+- remove `Remotes:` and rebuild against zufast's CRAN tarball;
+- set `Version: 0.1.0` and the NEWS heading;
+- run `--as-cran --run-donttest`, then the `cran-extrachecks` and `review-cran-submission` skills;
+- submit, then tag.
+
+**§19 acceptance criteria and what verifies each** (2026-10-08):
+
+| § 19 | Criterion | Verified by | State |
+|---|---|---|---|
+| 1 | installs everywhere with no system package; clean `--as-cran` | `R-CMD-check.yaml` on every leg; `SystemRequirements` empty | met in CI; the new-submission NOTE awaits submission |
+| 2 | byte-identical renders on all runners | `conformance.yaml` hashes job (five runners); `test-fixtures.R` on every R-CMD-check leg | met if `conformance.yaml` is green |
+| 3 | within tolerance of `rsvg` | `tools/run-conformance`, bounds in `tools/conformance.tsv` | met locally (31 of 31) and in CI |
+| 4 | 30 minutes of fuzzing clean; canary seen | `tools/run-fuzz`, `hardening.yaml` (nightly 30 minutes) | 20 minutes clean locally; the nightly job decides |
+| 5 | every class tested; every guard mutation-checked | `test-*.R`; `tools/run-mutation-check` (8 guards) | met |
+| 6 | a thousand icons under 0.1 s | `tools/run-benchmarks` | met: 0.073 s (design §16) |
+| 7 | vendor trees verified; only the init symbol exported | `vendor.yaml` (`verify-vendor`, canary, `check-symbols`) | met |
 
 ---
 
