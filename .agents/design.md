@@ -365,6 +365,7 @@ Reasons where they are not in the section cited:
   - `0011-stbi-idct-wide` (Stage 5): the scalar JPEG IDCT in 64-bit integers. The fuzzer found signed overflow from crafted coefficients.
   - `0012-dash-budget` (Stage 5): D18. The fuzzer found a dash explosion that ran out of memory and, in single precision, never ended.
   - `0015-use-ancestor-cycle` (Stage 5): a `<use>` of its own ancestor renders nothing. Otherwise `render_use()`'s parent rewrite makes the parent chain a loop that attribute inheritance walks forever; the step budget does not see it, because no element is visited. CI's fuzzer found it.
+  - `0016-blend-defined-casts` (Stage 5): the gradient and texture float-to-int casts are defined for NaN and out-of-range values, and texture positions step in 64 bits. CI's fuzzer found a NaN gradient position.
   - `0013-stroker-empty-border` (Stage 5): a NULL `memcpy()` source when stroking a one-point polygon. CI's fuzzer, on Linux x86-64, found it.
 
   Expected later:

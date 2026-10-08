@@ -86,3 +86,23 @@ test_that("a <use> of its own ancestor is refused, not looped on (0015)", {
   g <- svg_text('<g id="g"><rect width="4" height="4"/><use href="#g" x="5"/></g>')
   expect_s3_class(svg_render(g), "nativeRaster")
 })
+
+test_that("a degenerate gradient or texture makes no undefined cast (0016)", {
+  # The fuzzer's shape: a radial gradient on a circle of radius 1.4e30 in a
+  # document 3e382 (infinitely) wide gives NaN gradient positions.
+  txt <- paste0(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="3e+382" height="32"><defs>',
+    '<radialGradient id="g" gradientUnits="userSpaceOnUse" cx="16" cy="16" r="14" fx="10" fy="10">',
+    '<stop offset="1" stop-color="#fff"/><stop offset="1" stop-color="#083d77"/></radialGradient>',
+    '</defs><circle cx="16" cy="16" r="1444444444444444444444444444444" fill="url(#g)"/></svg>'
+  )
+  r <- tryCatch(svg_render(txt, width = 32, height = 32), zusvg_error = function(e) e)
+  expect_true(inherits(r, "nativeRaster") || inherits(r, "zusvg_error"))
+  # A linear gradient between two equal points, and an image squeezed flat.
+  lin <- svg_text(paste0(
+    '<defs><linearGradient id="l" x1="0" x2="0"><stop offset="0" stop-color="red"/>',
+    '<stop offset="1" stop-color="blue"/></linearGradient></defs>',
+    '<rect width="10" height="10" fill="url(#l)"/>'
+  ))
+  expect_s3_class(svg_render(lin), "nativeRaster")
+})
