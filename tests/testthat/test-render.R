@@ -119,15 +119,8 @@ test_that("grid and graphics draw the raster without conversion", {
 test_that("rendering many icons leaves resident memory flat", {
   skip_heavy()
   skip_if_not(file.exists("/proc/self/status"), "needs /proc")
-  rss <- function() {
-    s <- readLines("/proc/self/status")
-    as.numeric(sub("\\D+(\\d+).*", "\\1", grep("^VmRSS", s, value = TRUE)))
-  }
+  skip_if(identical(Sys.getenv("R_COVR"), "true"), "under covr")
   icon <- svg_load(svg_text('<circle cx="5" cy="5" r="4"/>'))
-  for (i in 1:50) svg_render(icon, width = 64)
-  gc()
-  before <- rss()
-  for (i in 1:1000) svg_render(icon, width = 64)
-  gc()
-  expect_lt(rss() - before, 10000)
+  # A leaked 64 by 64 surface is 16 KB, so 500 a window would be 8 MB.
+  expect_flat_rss(function() svg_render(icon, width = 64), n = 500, kb = 4000)
 })
