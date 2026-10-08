@@ -5,7 +5,8 @@
 # with the patch, which stops it at MAX_RENDER_DEPTH.
 #
 # Builds a small driver twice, against src/vendor/ as committed and against
-# a copy with 0001 reversed, renders the same generated document with each
+# upstream as released (every patch reversed: later patches touch the same
+# function, so 0001 alone cannot be), renders the same generated document with each
 # under an 8 MiB stack, and fails unless the first succeeds and the second
 # dies by a signal. Run from the package root, after tools/verify-vendor.
 #
@@ -69,9 +70,11 @@ build() {
 
 cp -R src/vendor "$WORK/unpatched"
 find "$WORK/unpatched" \( -name '*.o' -o -name '*.so' \) -delete
-patch -s -R -p1 -d "$WORK/unpatched" < tools/patches/0001-use-depth.patch
+for p in $(ls tools/patches/*.patch | sort -r); do
+  patch -s -R -p1 -d "$WORK/unpatched" < "$p"
+done
 
-echo "==> building the driver against src/vendor and against it without 0001"
+echo "==> building the driver against src/vendor and against upstream as released"
 build src/vendor "$WORK/patched"
 build "$WORK/unpatched" "$WORK/unpatched-driver"
 
