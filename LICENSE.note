@@ -1,0 +1,48 @@
+The zusvg package bundles copies of the plutosvg and plutovg C libraries.
+zusvg, plutosvg and plutovg are distributed under the MIT licence. plutovg
+contains code derived from FreeType, under the FreeType Licence, and the stb
+single-file libraries, under the MIT licence or in the public domain at the
+user's choice. Each licence applies to its own files.
+
+
+zusvg
+=====
+
+Copyright (c) 2026 zusvg authors
+
+Covers everything in the package except src/vendor/. Full text in
+LICENSE.md in the source repository; CRAN's YEAR/COPYRIGHT HOLDER form is
+in LICENSE.
+
+
+plutosvg and plutovg
+====================
+
+Copyright (c) 2020-2026 Samuel Ugochukwu. MIT licence.
+
+Bundled in src/vendor/plutosvg/ and src/vendor/plutovg/, at the release
+tags, commits and archive checksums recorded in src/vendor/PROVENANCE, with
+the patches listed there.
+
+
+FreeType-derived code
+=====================
+
+Portions of this software are copyright (C) 1996-2020 The FreeType Project
+(www.freetype.org). All rights reserved. FreeType Licence.
+
+src/vendor/plutovg/source/plutovg-ft-*.{c,h}; the licence text is in
+src/vendor/plutovg/source/FTL.TXT.
+
+
+stb
+===
+
+stb_image, stb_image_write and stb_truetype, by Sean Barrett and
+contributors. MIT licence or public domain, at the user's choice.
+
+src/vendor/plutovg/source/plutovg-stb-*.h; the licence text is at the end
+of each file.
+
+
+All notices are collected in inst/COPYRIGHTS.

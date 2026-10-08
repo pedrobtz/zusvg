@@ -1,4 +1,5 @@
 url: https://pedrobtz.github.io/zusvg/
 template:
   bootstrap: 5
-
+development:
+  mode: auto

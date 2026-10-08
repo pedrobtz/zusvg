@@ -1,0 +1,77 @@
+Vendored dependencies: plutosvg and plutovg
+
+plutosvg
+  Upstream:      https://github.com/sammycage/plutosvg
+  Release tag:   v0.0.8
+  Commit:        fd8a080b3d0bccc41f1ae708d3785e7f08398a58
+  Archive:       https://github.com/sammycage/plutosvg/archive/refs/tags/v0.0.8.tar.gz
+  SHA-256:       49d5cfe772d3aa10cd4879f2f6e189f5083c08e4c8ea01bf3d5b87c97dfca7d2
+  License:       MIT (src/vendor/plutosvg/LICENSE)
+
+plutovg
+  Upstream:      https://github.com/sammycage/plutovg
+  Release tag:   v1.3.3
+  Commit:        bbd91f0d06a71491691b36330f29dffa4af87ccf
+  Archive:       https://github.com/sammycage/plutovg/archive/refs/tags/v1.3.3.tar.gz
+  SHA-256:       2b0d17a6e016f47b86f9c00e2cb82600041b1ea1f7d2a00c2d46ae542cbfed3c
+  License:       MIT (src/vendor/plutovg/LICENSE); the FreeType-derived
+                 plutovg-ft-*.{c,h} under the FreeType Licence
+                 (src/vendor/plutovg/source/FTL.TXT); the stb headers
+                 public domain or MIT, at the end of each file
+
+  Imported:      2026-10-08
+  Local patches: applied in this order, from tools/patches/
+                 0001-use-depth.patch
+                 0002-loader-alloc-checks.patch
+                 0003-stbtt-def-guard.patch
+                 0004-stroker-unused-point.patch
+                 0005-stbiw-snprintf.patch
+                 0006-stbtt-no-pragmas.patch
+                 0007-bsearch-const.patch
+
+src/vendor/plutosvg/ and src/vendor/plutovg/ are the files listed in
+tools/plutosvg-files.txt and tools/plutovg-files.txt, copied from the
+archives to the same relative paths, with exactly the patches above
+applied. tools/verify-vendor re-derives both trees from the pinned archives
+and the patch series and fails on any other difference. Every patch is
+minimal and offered upstream; each is named in zusvg_info().
+
+Left out: plutosvg-ft.h (compiled only under PLUTOSVG_HAS_FREETYPE), CMake,
+Meson, the tests, the examples and the images. Compile configuration, in
+src/Makevars, with the reason for each there: PLUTOVG_BUILD_STATIC and
+PLUTOSVG_BUILD_STATIC (never the *_BUILD macros, which export the API past
+$(C_VISIBILITY)); STBIDEF, STBIWDEF and STBTT_DEF set to extern (hidden);
+PLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD; STBI_NO_* for every image format but
+PNG and JPEG; STBI_NO_THREAD_LOCALS; HAVE_THREADS_H and
+PLUTOSVG_HAS_FREETYPE undefined. R's -DNDEBUG removes the vendored
+assert()s in an installed build.
+
+GitHub publishes no uploaded release asset for these tags, so each archive
+is the one GitHub generates from the tag. Hash verification is
+trust-on-first-use: the SHA-256s above were computed at import time and are
+re-checked by tools/verify-vendor. If GitHub ever regenerates an archive
+with different bytes, verification fails, and the new archive must be
+compared against the recorded commit before the digest is updated.
+
+Compiler warnings from the vendored trees, Stage 0 first build (2026-10-08),
+macOS arm64, R 4.6.1, Apple clang and GCC 16, with the flags and patches
+above:
+
+  -Wall -pedantic (CRAN's flags), clang and GCC: none. Before patches 0003
+  and 0004 and the STBIDEF/STBIWDEF/STBTT_DEF flags, 68 -Wunused-function
+  (stb API functions plutovg never calls) and, under GCC, one
+  -Wunused-but-set-variable (plutovg-ft-stroker.c); R CMD check counts both
+  as significant warnings.
+
+  -Wall -Wextra -pedantic, adding (counts per file; same under both
+  compilers unless noted), left unpatched because CRAN's flags do not print
+  them:
+    plutosvg.c             3 -Wsign-compare, 3 -Wmissing-field-initializers
+                           (2 under GCC)
+    plutovg-blend.c        10 -Wunused-parameter
+    plutovg-font.c         7 -Wunused-parameter, 1 -Wsign-compare
+    plutovg-ft-stroker.c   1 -Wsign-compare
+    plutovg-path.c         1 -Wunused-parameter
+
+  Linux (GCC, clang) and Windows (Rtools) builds: see the R-CMD-check legs
+  of the Stage 0 pull request.

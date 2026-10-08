@@ -1,0 +1,45 @@
+#!/bin/sh
+# Fail if the built shared object references symbols R CMD check objects to,
+# or exports anything but R_init_zusvg (.agents/design.md §4, §9).
+#
+#   1. Output to the console (stdout, stderr, printf, puts, putchar, and the
+#      stream symbols clang rewrites fprintf(stderr, ...) into), ending the
+#      process (abort, exit, and assert(), which reaches them), [v]sprintf,
+#      or the system RNG (rand, random, srand). A hit in the vendor trees
+#      becomes a patch in tools/patches/, never a justification.
+#   2. Any defined, exported symbol other than R_init_zusvg: the vendored API
+#      must stay hidden behind $(C_VISIBILITY) (never define PLUTO*_BUILD).
+#
+# Run it on an R CMD INSTALL build, never a load_all() one: load_all()
+# compiles with -UNDEBUG, which keeps the vendored assert()s in.
+#
+# Usage: tools/check-symbols <path/to/zusvg.so>
+set -eu
+
+SO="${1:?usage: tools/check-symbols <path/to/zusvg.so>}"
+[ -f "$SO" ] || { echo "no shared object at $SO; build the package first" >&2; exit 2; }
+
+# Leading underscores differ by platform (_printf on macOS), and __stdoutp /
+# __stderrp are macOS's names for stdout / stderr.
+BAD='^_*(stdout|stderr|stdoutp|stderrp|printf|vprintf|sprintf|vsprintf|sprintf_chk|vsprintf_chk|puts|putchar|fputs|fprintf|vfprintf|abort|exit|_exit|_Exit|assert|assert_fail|assert_rtn|rand|random|srand|srandom|rand_r|drand48|srand48)$'
+
+status=0
+found=$(nm -u "$SO" | awk '{print $NF}' | grep -E "$BAD" || true)
+if [ -n "$found" ]; then
+  echo "FAIL: $SO references symbols R CMD check reports:" >&2
+  echo "$found" | sed 's/^/  /' >&2
+  status=1
+fi
+
+# nm -g lists external symbols; keep the defined ones (type not U) and drop
+# the linker's own (macOS dyld_stub_binder and similar have no section).
+exported=$(nm -g "$SO" | awk '$2 != "U" && NF == 3 {print $3}' |
+  sed 's/^_//' | grep -v '^R_init_zusvg$' || true)
+if [ -n "$exported" ]; then
+  echo "FAIL: $SO exports symbols other than R_init_zusvg:" >&2
+  echo "$exported" | head -20 | sed 's/^/  /' >&2
+  status=1
+fi
+
+[ "$status" -eq 0 ] && echo "==> $SO: no console, exit or RNG symbols; exports only R_init_zusvg"
+exit "$status"

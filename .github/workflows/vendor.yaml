@@ -1,0 +1,64 @@
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+name: vendor
+
+permissions:
+  contents: read
+
+jobs:
+  # src/vendor/plutosvg and src/vendor/plutovg are upstream's release files
+  # plus exactly tools/patches/, and are never edited in place.
+  # tools/verify-vendor re-derives both trees from the pinned archives and
+  # fails on any difference; the PR guard then requires a change under
+  # src/vendor to come through tools/update-plutosvg, which rewrites the
+  # provenance record and src/zsg_vendor.h. A patch change also fails
+  # test-info.R's literal until that is updated (.agents/design.md §9, D4).
+  vendor:
+    uses: pedrobtz/r-actions/.github/workflows/vendor.yml@bdfde5edd37f25b33af142a4a881585e77bda3c2 # v1.22.0
+    with:
+      verify: tools/verify-vendor
+      must-update: |
+        src/vendor/PROVENANCE
+        src/zsg_vendor.h
+
+  # The canary: verification must fail with the first patch left out.
+  verify-canary:
+    runs-on: ubuntu-latest
+    name: verify-vendor fails without a patch
+    steps:
+      - uses: actions/checkout@v4
+      - run: tools/verify-vendor --canary
+
+  # R CMD check NOTEs a shared object that references stdout/stderr, printf,
+  # abort, exit or assert, and the vendored API must stay hidden (design §4,
+  # §9). Checked on a plain R CMD INSTALL build, which compiles with R's
+  # -DNDEBUG as CRAN does.
+  symbols:
+    runs-on: ubuntu-latest
+    name: no console or exit symbols; only R_init_zusvg exported
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          dependencies: '"hard"'
+      - name: Install and inspect the shared object
+        run: |
+          mkdir -p "$RUNNER_TEMP/lib"
+          R CMD INSTALL --preclean --no-test-load -l "$RUNNER_TEMP/lib" .
+          tools/check-symbols "$RUNNER_TEMP/lib/zusvg/libs/zusvg.so"
+
+  # tools/patches/0001-use-depth.patch is load-bearing: a long <use> chain
+  # crashes plutosvg without it and renders with it (design §9).
+  use-chain:
+    runs-on: ubuntu-latest
+    name: the <use> depth patch is load-bearing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+      - run: tools/check-use-chain

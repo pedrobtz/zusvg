@@ -73,17 +73,17 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 0 — Vendor trees, patch set, update and verify tools, first build · L
 
-**Status:** not started.
+**Status:** in review (#11). Every exit criterion is met locally on macOS arm64, and the first CI run passed on every leg except `clang23`, which `0007` addresses.
 
 **Goal:** both libraries compile into `zusvg.so` on Linux, macOS and Windows, byte-identical to their tags plus a recorded patch set, with no forbidden symbol, and the package checks 0/0/0 before any `svg_*` function exists.
 
 **Do**
 
-- `DESCRIPTION`: `Title: Render 'SVG' Images Without System Dependencies`; a `Description` naming plutosvg, the outputs and what is not supported (text, filters, CSS); `Authors@R` Pedro Baltazar (`aut`, `cre`, `cph`) plus the plutosvg and plutovg copyright holders as `cph` with comments naming the library (re-check the vendored file headers: `grep -h Copyright src/vendor/*/*`); `Depends: R (>= 4.1)`; `Imports: grDevices`; `LinkingTo: zufast (>= 0.1.0)`; `Remotes: pedrobtz/zufast@main` (development only); `Suggests: rsvg, png, jpeg, grid, ggplot2, testthat (>= 3.0.0), withr, knitr, rmarkdown`; `License: MIT + file LICENSE`; `Copyright: file inst/COPYRIGHTS`; `Language: en-GB`; `Config/roxygen2/version: 8.1.0`; `URL`, `BugReports`; `Config/testthat/edition: 3`, no `parallel`; empty `SystemRequirements`.
+- `DESCRIPTION`: `Title: Render 'SVG' Images Without System Dependencies`; a `Description` naming plutosvg, the outputs and what is not supported (text, filters, CSS); `Authors@R` Pedro Baltazar (`aut`, `cre`, `cph`) plus the plutosvg and plutovg copyright holders as `cph` with comments naming the library (re-check the vendored file headers: `grep -h Copyright src/vendor/*/*`); `Depends: R (>= 4.1)`; `LinkingTo: zufast (>= 0.1.0)`; `Remotes: pedrobtz/zufast@main` (development only); `Suggests: rsvg, png, jpeg, grid, ggplot2, testthat (>= 3.0.0), withr, knitr, rmarkdown`; `License: MIT + file LICENSE`; `Copyright: file inst/COPYRIGHTS`; `Language: en-GB`; `Config/roxygen2/version: 8.1.0`; `URL`, `BugReports`; `Config/testthat/edition: 3`, no `parallel`; empty `SystemRequirements`.
 - `inst/COPYRIGHTS` with zusvg's, plutosvg's and plutovg's notices and the FTL text; `LICENSE.note`.
 - **Re-check upstream first** (zuxml found four releases and four CVEs between its design and its import): the latest tags on 2026-10-08 are plutosvg v0.0.8 and plutovg v1.3.3 (confirmed with `git ls-remote` that day).
 - `tools/update-plutosvg <plutosvg-tag> <plutovg-tag>`: fetch both release tarballs, record SHA-256s, copy the listed files (`tools/plutosvg-files.txt`, `tools/plutovg-files.txt`: sources and headers, `LICENSE`, `FTL.TXT`; no tests, examples, Meson or CMake files) into `src/vendor/`, apply `tools/patches/*.patch` in order, write `src/vendor/PROVENANCE`. `tools/verify-vendor` re-derives the trees and fails on any difference, including a stale `PROVENANCE`; seen to fail on a one-byte edit, a stray file and a dropped patch.
-- `src/Makevars` as §14: the 12 vendored objects plus `init.c`, hand-listed; `-DPLUTOVG_BUILD_STATIC -DPLUTOSVG_BUILD_STATIC -DPLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD` and never `-D*_BUILD` (which exports the API past `$(C_VISIBILITY)`, §4); the `-I` flags; the `STBI_NO_*` list and not `STBI_NO_STDIO`; `PKG_LIBS = -lm`; no `Makevars.win`. `src/init.c` registering `zusvg_info()`; delete `src/zusvg.c`.
+- `src/Makevars` as §14: the 12 vendored objects plus the project's, hand-listed; `-DPLUTOVG_BUILD_STATIC -DPLUTOSVG_BUILD_STATIC` and never `-D*_BUILD` (which exports the API past `$(C_VISIBILITY)`, §4); the stb linkage and `STBI_*` flags of design §9 and §14 (not `STBI_NO_STDIO`); `-DPLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD`; the `-I` flags; `PKG_LIBS = -lm`; no `Makevars.win`. `src/init.c` registering `zusvg_info()`; delete `src/zusvg.c`.
 - **The first build under `-Wall -Wextra -pedantic`** on all three platforms: record every warning from the vendor trees in `PROVENANCE`; patch what CRAN's flags would print.
 - `tools/check-symbols` (`nm -u` over the built objects, the list in design §9: no `stdout`, `stderr`, `printf`, `fprintf`, `fputs`, `puts`, `abort`, `exit`, `assert`, `rand`; the stream symbols too, since clang rewrites `fprintf` into `fwrite`), run on an `R CMD INSTALL` build, where `-DNDEBUG` removes the vendored `assert()`s; seen to fail on a planted `fprintf(stderr, ...)`. Any hit in the vendor trees becomes a patch, never a justification (`packages/templates/package-CLAUDE.md`: zuxml's first upload was rejected at the pretest for exactly that).
 - **Write D4's first patches.** The 2026-10-08 reading settled what was open here: 0.0.8's 256-level cap does not cover `<use>` chains (design §9). So:
@@ -110,6 +110,28 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 **Trap:** if a platform fights the build, fix configuration in `Makevars` or a project-owned header first; a patch to the vendor tree is the last resort, and then it goes through `tools/patches/` and `PROVENANCE`.
 
 **Not this stage:** any `svg_*` function beyond `zusvg_info()`.
+
+**What actually happened**
+
+- **Tracking.** Parent #2 and stage issues #3–#10 were opened. The parent went on project 3 directly, because zusvg had no draft card for `stage-cards.sh` to replace; adding it to the script's list is pedrobtz/packages#24.
+- **Seven patches, not two.** `0001-use-depth` and `0002-loader-alloc-checks` were planned. Five more came from R CMD check itself, and none could be fixed in `Makevars` alone:
+  - `0003` guards `STBTT_DEF`, so the build can give stb_truetype external linkage, which ends 30 of the 68 `-Wunused-function` warnings.
+  - `0004` removes a variable that GCC reports as set but not used.
+  - `0005` replaces the `sprintf()` that external linkage kept alive with `snprintf()`.
+  - `0006` removes a diagnostic-suppressing pragma, which the check NOTEs.
+  - `0007` keeps a `bsearch()` result `const`. C23 makes `bsearch()` const-preserving, and the first CI run's `clang23` leg (R-devel's C23) reported the discarded qualifier. Windows, macOS, and Linux with GCC 16 and clang all passed that same run.
+- **`0002` covers only plutosvg's loader.** plutovg's growth arrays have no failure path (design §9); Stage 5's allocation-failure job tests them.
+- **Configuration found by the build:**
+  - `STBIDEF` and `STBIWDEF` set to `extern` for the other 38 unused stb functions.
+  - `STBI_NO_THREAD_LOCALS`, because emulated thread-local storage linked libgcc's `abort()` under GCC on macOS. It would do the same under MinGW.
+  - `Imports: grDevices` waits for Stage 2, since an unused import is a check NOTE.
+- **`check-symbols` is stricter than planned.** It also fails on `sprintf`/`vsprintf` and on any export but `R_init_zusvg`. It was seen to fail on:
+  - a planted `fprintf(stderr, ...)`;
+  - `-D*_BUILD`, which exported the plutosvg API;
+  - stale `-UNDEBUG` objects from `load_all()`.
+- **The `.o` trap.** `R CMD build` keeps objects in `src/` subdirectories, and the first check failed on `load_all()`'s `assert()`s for that reason. `.Rbuildignore` now excludes `^src/.*\.o$`.
+- **`tools/check-use-chain`** builds a small C driver against the patched tree and against it without `0001`. A 200 000-hop chain renders with the patch and segfaults without it; 30 000 hops (about 1 MB) is enough to crash.
+- **The feature survey** is in design §3. D3 stands, D15 decides clip paths, and design §18 Q6 and Q8 are closed.
 
 ---
 
@@ -139,7 +161,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 **Do**
 
 - `src/zsg_render.c`: surface and canvas in a finalized external pointer created before any R allocation; sizes computed as doubles and checked first (finite, under plutovg's 32768, within `max_pixels`; design §6.1); background clear; scale and translate from the intrinsic size; `plutosvg_document_render()` with the whole document; ARGB premultiplied → straight RGBA (`plutovg_convert_argb_to_rgba()`) written straight into the `nativeRaster`'s integers, which on little-endian are R's packed ABGR (design §6.2).
-- `R/render.R`: `width`/`height`/`scale` resolution (§5), `background` and `color` through `col2rgb(alpha = TRUE)`, `as = "native"` only.
+- `R/render.R`: `width`/`height`/`scale` resolution (§5), `background` and `color` through `col2rgb(alpha = TRUE)`, `as = "native"` only; `Imports: grDevices` arrives here with its first use (an unused import is a check NOTE).
 - A test for `zusvg_render_error` and for the surface's `zusvg_memory_error`.
 - `tools/update-fixtures`: the project corpus (one file per element type, `preserveAspectRatio` values, gradients, clip paths, `use`, nested svg, `currentColor`, embedded PNG and JPEG, text) and the `resvg` `structure` and `painting` subsets, with `fixtures/README.md` (sources, licences) and `hashes.tsv` of pinned render hashes at fixed sizes.
 - Shape tests: class, `dim()`, pinned pixels; `rasterGrob()` and `rasterImage()` into a `png()` device, read back with `png::readPNG()` and compared by pixel within a tolerance, not by file bytes, which vary with the device backend (`skip_if_not_installed("png")`).
@@ -178,8 +200,8 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 **Do**
 
 - `svg_png()` and `svg_jpeg()` through plutovg's `stb_image_write` stream functions into a growable buffer owned by the render's external pointer; `file = NULL` returns raw; a path or connection is written from R.
-- `svg_elements()`: the element list the pre-scan recorded in Stage 1 (id, tag, `has_text` per subtree), plus `has_clip` if design §18 Q8 chose the warning.
-- `zusvg_text_skipped`, one per rendering call, with the count, suppressed by `quiet = TRUE`; `zusvg_clip_skipped` likewise if §18 Q8 chose it.
+- `svg_elements()`: the element list the pre-scan recorded in Stage 1 (id, tag, `has_text` per subtree), plus `has_clip` (design D15).
+- `zusvg_text_skipped`, one per rendering call, with the count, suppressed by `quiet = TRUE`; `zusvg_clip_skipped` likewise (design D15). For it the pre-scan records each `clip-path` reference and whether the `<clipPath>` it names is a single rectangle covering the canvas, which is a no-op and does not warn.
 - Tests: PNG bytes pinned per platform (expected identical); `png::readPNG()` reads them back; JPEG decodes with `jpeg::readJPEG()` to within tolerance; the warning class and count; `svg_elements()` on an icon sheet.
 
 **Exit**
@@ -254,7 +276,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Explicitly not in 0.1.0
 
-Text · filters, masks, patterns, markers, CSS sheets · clip paths, unless design §18 Q8 chooses the patch · a `palette` function · vector output · an SVG graphics device · a parsed-tree accessor · `.svgz` and zukomp deflate if zukomp is not on CRAN by Stage 6.
+Text · filters, masks, patterns, markers, CSS sheets · applying clip paths (design D15: a warning in 0.1.0, the patch after) · a `palette` function · vector output · an SVG graphics device · a parsed-tree accessor · `.svgz` and zukomp deflate if zukomp is not on CRAN by Stage 6.
 
 ## Risk register
 
@@ -266,7 +288,7 @@ Text · filters, masks, patterns, markers, CSS sheets · clip paths, unless desi
 | `<use>` chain recursion overflows the C stack (*confirmed 2026-10-08*: 0.0.8's cap does not cover it) | 0, 5 | the depth patch at Stage 0 with a crashing fixture; the fuzzer with a stack limit at Stage 5 |
 | `-D*_BUILD` exports the vendored API past `$(C_VISIBILITY)` | 0 | `*_BUILD_STATIC` only (design §4); `tools/check-symbols` |
 | plutovg's `int` byte count overflows, or `(int)ceilf()` of a huge size | 1, 2 | sizes checked in R as doubles; `max_pixels` capped below 2^29 (design §6.1) |
-| clip paths silently ignored | 0, 4 | design §18 Q8, decided from the survey; fixtures pin the behaviour |
+| clip paths silently ignored | 4 | design D15: `zusvg_clip_skipped` unless the clip is a no-op; fixtures pin the behaviour |
 | renders differ across platforms, including FMA contraction on arm64 | 2, 6 | hashes checked from the first render; §18 Q9; CRAN tests use a tolerance (D14) |
 | `<use>` fan-out takes exponential time | 5 | §18 Q2's step counter; known slow inputs in the corpus |
 | `stb_image` CVE class in embedded images | all | `STBI_NO_*`; `images = FALSE`; the fuzz corpus includes images; `vendor-upstream.yaml` flags new tags |
@@ -276,6 +298,6 @@ Text · filters, masks, patterns, markers, CSS sheets · clip paths, unless desi
 ## After 0.1.0
 
 1. `.svgz` and zukomp compression for PNG if they missed Stage 6.
-2. Clip paths, if §18 Q8 chose the warning or waiting for upstream.
+2. The patch that applies clip paths (design D15), offered upstream.
 3. A parsed-tree accessor over `zuxml` (§18 Q3) and SVG-to-PDF through `zupdf` (§18 Q4), each when asked.
 4. The next plutosvg or plutovg release, through `tools/update-plutosvg`, dropping any patch upstream accepted.

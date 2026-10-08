@@ -1,0 +1,35 @@
+Subject: Drop the -Wcast-qual diagnostic pragmas in stb_truetype
+
+stb_truetype wraps its const-casting public wrappers in
+#pragma GCC diagnostic push / ignored "-Wcast-qual" / pop. R CMD check
+reports any diagnostic-suppressing pragma in a package's sources, and
+-Wcast-qual is in neither -Wall nor -Wextra, so removing the pragmas
+changes no warning a build prints.
+
+zusvg: .agents/design.md §14. Offered upstream.
+
+--- a/plutovg/source/plutovg-stb-truetype.h
++++ b/plutovg/source/plutovg-stb-truetype.h
+@@ -4929,11 +4929,6 @@
+    }
+ }
+ 
+-#if defined(__GNUC__) || defined(__clang__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wcast-qual"
+-#endif
+-
+ STBTT_DEF int stbtt_BakeFontBitmap(const unsigned char *data, int offset,
+                                 float pixel_height, unsigned char *pixels, int pw, int ph,
+                                 int first_char, int num_chars, stbtt_bakedchar *chardata)
+@@ -4966,10 +4961,6 @@
+    return stbtt_CompareUTF8toUTF16_bigendian_internal((char *) s1, len1, (char *) s2, len2);
+ }
+ 
+-#if defined(__GNUC__) || defined(__clang__)
+-#pragma GCC diagnostic pop
+-#endif
+-
+ #endif // STB_TRUETYPE_IMPLEMENTATION
+ 
+ 

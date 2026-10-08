@@ -1,0 +1,28 @@
+# plutovg files vendored into src/vendor/plutovg/, as paths inside the
+# release tarball; each is copied byte-for-byte to the same relative path.
+# Every translation unit is compiled: plutovg-canvas.c calls into
+# plutovg-font.c, so the font code cannot be dropped (.agents/design.md §9).
+# CMake, Meson, the tests and the examples are left out.
+include/plutovg.h
+source/plutovg-blend.c
+source/plutovg-canvas.c
+source/plutovg-font.c
+source/plutovg-ft-math.c
+source/plutovg-ft-math.h
+source/plutovg-ft-raster.c
+source/plutovg-ft-raster.h
+source/plutovg-ft-stroker.c
+source/plutovg-ft-stroker.h
+source/plutovg-ft-types.h
+source/plutovg-matrix.c
+source/plutovg-paint.c
+source/plutovg-path.c
+source/plutovg-private.h
+source/plutovg-rasterize.c
+source/plutovg-stb-image-write.h
+source/plutovg-stb-image.h
+source/plutovg-stb-truetype.h
+source/plutovg-surface.c
+source/plutovg-utils.h
+source/FTL.TXT
+LICENSE

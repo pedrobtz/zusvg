@@ -1,0 +1,53 @@
+Subject: Count <use> hops against MAX_RENDER_DEPTH
+
+render_children() caps lexical nesting at MAX_RENDER_DEPTH (256), but
+render_use() calls render_element() on its target directly, so a chain of
+distinct <use> elements (a -> b -> c -> ...) recurses on the C stack to the
+chain's length and a document of about a megabyte overflows it.
+has_cycle_reference() stops only a <use> already on the render stack.
+
+Count each <use> hop in the same context->depth, and stop at the same cap.
+Moves the MAX_RENDER_DEPTH definition above its first use.
+
+zusvg: .agents/design.md §9, §17 D4. Offered upstream.
+
+--- a/plutosvg/source/plutosvg.c
++++ b/plutosvg/source/plutosvg.c
+@@ -2144,10 +2144,12 @@
+     float _h = resolve_length(state, &h, 'y');
+     render_symbol(element, context, state, _x, _y, _w, _h);
+ }
++
++#define MAX_RENDER_DEPTH 256
+ 
+ static void render_use(const element_t* element, render_context_t* context, render_state_t* state)
+ {
+-    if(is_display_none(element) || has_cycle_reference(state, element))
++    if(context->depth >= MAX_RENDER_DEPTH || is_display_none(element) || has_cycle_reference(state, element))
+         return;
+     element_t* ref = resolve_href(context->document, element);
+     if(ref == NULL)
+@@ -2167,12 +2169,14 @@
+ 
+     const element_t* parent = ref->parent;
+     ref->parent = (element_t*)(element);
++    context->depth++;
+     if(ref->id == TAG_SVG || ref->id == TAG_SYMBOL) {
+         render_svg(ref, context, &new_state);
+     } else {
+         render_element(ref, context, &new_state);
+     }
+ 
++    context->depth--;
+     ref->parent = (element_t*)(parent);
+     render_state_end(&new_state);
+ }
+@@ -2568,8 +2572,6 @@
+     }
+ }
+ 
+-#define MAX_RENDER_DEPTH 256
+-
+ static void render_children(const element_t* element, render_context_t* context, render_state_t* state)
+ {
+     if(context->depth < MAX_RENDER_DEPTH) {

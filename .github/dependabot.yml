@@ -1,0 +1,9 @@
+# Keeps the GitHub Actions pins current, including the commit pins on
+# pedrobtz/r-actions' reusable workflows (alignment rule R5).
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

@@ -1,0 +1,177 @@
+Subject: Fail the load cleanly when an allocation fails
+
+The loader's heaps, hash map and document are allocated with unchecked
+malloc() and calloc(), so running out of memory while loading a large
+document dereferences NULL instead of returning NULL.
+
+Check each allocation the loader makes. A failure inside
+parse_attributes() (an attribute or an id entry) sets document->failed,
+which the loop tests after each start tag; every failure leaves through
+the existing error path, so plutosvg_document_load_from_data() returns
+NULL and has called destroy_func(closure), as for a parse error. A failed
+hash-map resize keeps the old buckets.
+
+plutovg's own growth arrays are not covered: plutovg_array_ensure() has no
+failure path, and changing it touches every caller.
+
+zusvg: .agents/design.md §9, §17 D4. Offered upstream.
+
+--- a/plutosvg/source/plutosvg.c
++++ b/plutosvg/source/plutosvg.c
+@@ -258,6 +258,8 @@
+ static heap_t* heap_create(void)
+ {
+     heap_t* heap = malloc(sizeof(heap_t));
++    if(heap == NULL)
++        return NULL;
+     heap->chunk = NULL;
+     heap->size = 0;
+     return heap;
+@@ -271,6 +273,8 @@
+     size = ALIGN_SIZE(size);
+     if(heap->chunk == NULL || heap->size + size > CHUNK_SIZE) {
+         heap_chunk_t* chunk = malloc(CHUNK_SIZE + sizeof(heap_chunk_t));
++        if(chunk == NULL)
++            return NULL;
+         chunk->next = heap->chunk;
+         heap->chunk = chunk;
+         heap->size = 0;
+@@ -283,6 +287,8 @@
+ 
+ static void heap_destroy(heap_t* heap)
+ {
++    if(heap == NULL)
++        return;
+     while(heap->chunk) {
+         heap_chunk_t* chunk = heap->chunk;
+         heap->chunk = chunk->next;
+@@ -308,7 +314,14 @@
+ static hashmap_t* hashmap_create(void)
+ {
+     hashmap_t* map = malloc(sizeof(hashmap_t));
++    if(map == NULL)
++        return NULL;
+     map->buckets = calloc(16, sizeof(hashmap_entry_t*));
++    if(map->buckets == NULL) {
++        free(map);
++        return NULL;
++    }
++
+     map->size = 0;
+     map->capacity = 16;
+     return map;
+@@ -344,6 +357,8 @@
+     if(map->size > (map->capacity * 3 / 4)) {
+         size_t newcapacity = map->capacity << 1;
+         hashmap_entry_t** newbuckets = calloc(newcapacity, sizeof(hashmap_entry_t*));
++        if(newbuckets == NULL)
++            return;
+         for(size_t i = 0; i < map->capacity; i++) {
+             hashmap_entry_t* entry = map->buckets[i];
+             while(entry) {
+@@ -361,7 +376,7 @@
+     }
+ }
+ 
+-static void hashmap_put(hashmap_t* map, heap_t* heap, const char* data, size_t length, void* value)
++static bool hashmap_put(hashmap_t* map, heap_t* heap, const char* data, size_t length, void* value)
+ {
+     size_t hash = hashmap_hash(data, length);
+     size_t index = hash & (map->capacity - 1);
+@@ -371,6 +386,8 @@
+         hashmap_entry_t* current = *p;
+         if(current == NULL) {
+             hashmap_entry_t* entry = heap_alloc(heap, sizeof(hashmap_entry_t));
++            if(entry == NULL)
++                return false;
+             entry->name.data = data;
+             entry->name.length = length;
+             entry->hash = hash;
+@@ -389,6 +406,8 @@
+ 
+         p = &current->next;
+     }
++
++    return true;
+ }
+ 
+ static void* hashmap_get(const hashmap_t* map, const char* data, size_t length)
+@@ -1148,11 +1167,14 @@
+     void* closure;
+     float width;
+     float height;
++    bool failed;
+ };
+ 
+ static plutosvg_document_t* plutosvg_document_create(float width, float height, plutovg_destroy_func_t destroy_func, void* closure)
+ {
+     plutosvg_document_t* document = malloc(sizeof(plutosvg_document_t));
++    if(document == NULL)
++        return NULL;
+     document->heap = heap_create();
+     document->path = plutovg_path_create();
+     document->id_cache = NULL;
+@@ -1161,6 +1183,7 @@
+     document->closure = closure;
+     document->width = width;
+     document->height = height;
++    document->failed = document->heap == NULL;
+     return document;
+ }
+ 
+@@ -1179,6 +1202,11 @@
+ static void add_attribute(element_t* element, plutosvg_document_t* document, int id, const char* data, size_t length)
+ {
+     attribute_t* attribute = heap_alloc(document->heap, sizeof(attribute_t));
++    if(attribute == NULL) {
++        document->failed = true;
++        return;
++    }
++
+     attribute->id = id;
+     attribute->value.data = data;
+     attribute->value.length = length;
+@@ -1240,7 +1268,9 @@
+             if(id == ATTR_ID) {
+                 if(document->id_cache == NULL)
+                     document->id_cache = hashmap_create();
+-                hashmap_put(document->id_cache, document->heap, data, length, element);
++                if(document->id_cache == NULL || !hashmap_put(document->id_cache, document->heap, data, length, element)) {
++                    document->failed = true;
++                }
+             } else if(id == ATTR_STYLE) {
+                 parse_style(data, length, element, document);
+             } else {
+@@ -1276,6 +1306,14 @@
+     const char* end = it + length;
+ 
+     plutosvg_document_t* document = plutosvg_document_create(width, height, destroy_func, closure);
++    if(document == NULL) {
++        if(destroy_func)
++            destroy_func(closure);
++        return NULL;
++    }
++
++    if(document->failed)
++        goto error;
+     element_t* current = NULL;
+     int ignoring = 0;
+     while(it < end) {
+@@ -1392,6 +1430,8 @@
+                 if(document->root_element && current == NULL)
+                     goto error;
+                 element = heap_alloc(document->heap, sizeof(element_t));
++                if(element == NULL)
++                    goto error;
+                 element->id = id;
+                 element->parent = NULL;
+                 element->next_sibling = NULL;
+@@ -1416,7 +1456,7 @@
+         }
+ 
+         skip_ws(&it, end);
+-        if(!parse_attributes(&it, end, element, document))
++        if(!parse_attributes(&it, end, element, document) || document->failed)
+             goto error;
+         if(it < end && *it == '>') {
+             if(element)
