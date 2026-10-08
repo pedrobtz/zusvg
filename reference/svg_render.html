@@ -114,8 +114,11 @@ rsvg's <code>rsvg_raw()</code> returns and magick's <code>image_read()</code> ta
 
 
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
-<dd><p>Reserved: will silence the warning for text that does not
-render.</p></dd>
+<dd><p>If <code>TRUE</code>, no warning is given for content that will not
+render. Otherwise each call warns once for text
+(<code>zusvg_text_skipped</code>) and once for clip paths that would change the
+picture (<code>zusvg_clip_skipped</code>), each with the <code>count</code> affected; both
+inherit <code>zusvg_warning</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

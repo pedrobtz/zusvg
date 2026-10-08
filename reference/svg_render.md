@@ -89,7 +89,11 @@ svg_render(
 
 - quiet:
 
-  Reserved: will silence the warning for text that does not render.
+  If `TRUE`, no warning is given for content that will not render.
+  Otherwise each call warns once for text (`zusvg_text_skipped`) and
+  once for clip paths that would change the picture
+  (`zusvg_clip_skipped`), each with the `count` affected; both inherit
+  `zusvg_warning`.
 
 - ...:
 

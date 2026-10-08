@@ -23,6 +23,14 @@
   [`svg_extents()`](https://pedrobtz.github.io/zusvg/reference/svg_extents.md)
   measures.
 - A `<use>` of a `<symbol>` is sized by the `<use>` (patch 0008).
+- [`svg_png()`](https://pedrobtz.github.io/zusvg/reference/svg_png.md)
+  and
+  [`svg_jpeg()`](https://pedrobtz.github.io/zusvg/reference/svg_png.md)
+  encode a render, returning bytes or writing a file or connection;
+  [`svg_elements()`](https://pedrobtz.github.io/zusvg/reference/svg_elements.md)
+  lists a document’s elements by `id`. Text and clip paths that will not
+  render warn once per call (`zusvg_text_skipped`, `zusvg_clip_skipped`)
+  unless `quiet = TRUE`.
 - [`zusvg_info()`](https://pedrobtz.github.io/zusvg/reference/zusvg_info.md)
   reports the bundled versions, their upstream tags and commits, and the
   patches.
