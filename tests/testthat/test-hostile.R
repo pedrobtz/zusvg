@@ -27,7 +27,7 @@ test_that("a long dashed path is bounded in segments and time (0012)", {
   ))
   elapsed <- system.time(r <- svg_render(txt))[["elapsed"]]
   expect_s3_class(r, "nativeRaster")
-  expect_lt(elapsed, 10)
+  expect_quick(elapsed, 10)
 })
 
 test_that("an embedded image larger than 4096 pixels a side is not decoded", {
@@ -81,7 +81,7 @@ test_that("a <use> of its own ancestor is refused, not looped on (0015)", {
     expect_type(svg_extents(txt), "double")
     expect_s3_class(svg_render(txt, width = 32), "nativeRaster")
   })[["elapsed"]]
-  expect_lt(elapsed, 5)
+  expect_quick(elapsed, 5)
   # A <use> of an enclosing group, too.
   g <- svg_text('<g id="g"><rect width="4" height="4"/><use href="#g" x="5"/></g>')
   expect_s3_class(svg_render(g), "nativeRaster")

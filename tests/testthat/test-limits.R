@@ -65,5 +65,5 @@ test_that("a <use> fan-out is stopped by the render step budget", {
   elapsed <- system.time(
     expect_zusvg_error(svg_render(txt), "zusvg_limit_error", limit = "render_steps")
   )[["elapsed"]]
-  expect_lt(elapsed, 10)
+  expect_quick(elapsed, 10)
 })
