@@ -16,10 +16,10 @@ First release.
   (`zusvg_limit_error`, `limit = "render_steps"`), a dashed path after a
   million segments, and embedded images larger than 4096 pixels a side are
   not decoded.
-* Bundles plutosvg 0.0.8 and plutovg 1.3.3 with fifteen local patches,
+* Bundles plutosvg 0.0.8 and plutovg 1.3.3 with sixteen local patches,
   recorded in `src/vendor/PROVENANCE` and offered upstream: two planned
   (`<use>` depth, loader allocation checks), one for `<use>` of a
-  `<symbol>`, seven for undefined behaviour, unbounded work and a hang that
+  `<symbol>`, eight for undefined behaviour, unbounded work and a hang that
   the fuzzer and the sanitizers found, and five for what R CMD check
   reports.
 * A 64 by 64 icon loads and renders in about 0.1 ms; see `tools/run-benchmarks`.
