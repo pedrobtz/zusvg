@@ -34,6 +34,25 @@ static const char *const tag_names[ZSG_TAG_COUNT] = {
     "rect", "stop", "svg", "symbol", "use"
 };
 
+static const char *const attr_names[ZSG_ATTR_COUNT] = {
+    "clip-path", "clipPathUnits", "height", "style", "transform", "viewBox",
+    "width", "x", "y"
+};
+
+const char *zsg_attr_name(int attr)
+{
+    return (attr >= 1 && attr <= ZSG_ATTR_COUNT) ? attr_names[attr - 1] : "";
+}
+
+static int attr_id(const char *name, size_t len)
+{
+    for (int i = 0; i < ZSG_ATTR_COUNT; i++) {
+        if (strlen(attr_names[i]) == len && memcmp(attr_names[i], name, len) == 0)
+            return i + 1;
+    }
+    return 0;
+}
+
 #define TAG_IMAGE 6 /* 1-based */
 #define TAG_SVG 15
 
@@ -111,10 +130,10 @@ static int grow(zsg_scan *s)
     if (tag == NULL)
         return 0;
     s->tag = tag;
-    unsigned char *has_text = realloc(s->has_text, cap);
-    if (has_text == NULL)
+    size_t *n_text_in = realloc(s->n_text_in, cap * sizeof *n_text_in);
+    if (n_text_in == NULL)
         return 0;
-    s->has_text = has_text;
+    s->n_text_in = n_text_in;
     size_t *id_off = realloc(s->id_off, cap * sizeof *id_off);
     if (id_off == NULL)
         return 0;
@@ -127,7 +146,27 @@ static int grow(zsg_scan *s)
     return 1;
 }
 
-/* plutosvg's parse_attributes(). Records the id when `entry` is not -1. */
+static int add_attr(zsg_scan *s, size_t elem, int name, size_t off, size_t len)
+{
+    if (s->n_attr == s->attr_cap) {
+        size_t cap = s->attr_cap ? s->attr_cap * 2 : 64;
+        zsg_attr *a = realloc(s->attrs, cap * sizeof *a);
+        if (a == NULL)
+            return 0;
+        s->attrs = a;
+        s->attr_cap = cap;
+    }
+    zsg_attr *a = &s->attrs[s->n_attr++];
+    a->elem = elem;
+    a->name = name;
+    a->off = off;
+    a->len = len;
+    return 1;
+}
+
+/* plutosvg's parse_attributes(). Records the id, and the attributes of
+ * attr_names, when `entry` is not -1. Returns 0 on a syntax error, -1 when
+ * recording ran out of memory. */
 static int parse_attributes(const char **begin, const char *end,
                             const char *base, zsg_scan *s, long entry)
 {
@@ -151,10 +190,18 @@ static int parse_attributes(const char **begin, const char *end,
             ++it;
         if (it >= end || *it != quote)
             return 0;
-        /* plutosvg's id cache keeps the last id an element gives. */
-        if (entry >= 0 && name_len == 2 && name[0] == 'i' && name[1] == 'd') {
-            s->id_off[entry] = (size_t) (value - base);
-            s->id_len[entry] = (size_t) (rtrim(value, it) - value);
+        if (entry >= 0) {
+            size_t off = (size_t) (value - base);
+            size_t len = (size_t) (rtrim(value, it) - value);
+            int attr;
+            /* plutosvg's id cache keeps the last id an element gives. */
+            if (name_len == 2 && name[0] == 'i' && name[1] == 'd') {
+                s->id_off[entry] = off;
+                s->id_len[entry] = len;
+            } else if ((attr = attr_id(name, name_len)) != 0) {
+                if (!add_attr(s, (size_t) entry, attr, off, len))
+                    return -1;
+            }
         }
         ++it;
         skip_ws(&it, end);
@@ -318,8 +365,8 @@ zsg_status zsg_scan_run(const char *data, size_t n, const zsg_limits *limits,
 
         if (name_len == 4 && memcmp(name, "text", 4) == 0) {
             s->n_text++;
-            for (long e = current; e >= 0 && !s->has_text[e]; e = s->parent[e])
-                s->has_text[e] = 1;
+            for (long e = current; e >= 0; e = s->parent[e])
+                s->n_text_in[e]++;
         }
 
         long entry = -1;
@@ -346,14 +393,17 @@ zsg_status zsg_scan_run(const char *data, size_t n, const zsg_limits *limits,
                 entry = (long) s->n++;
                 s->parent[entry] = (int) current;
                 s->tag[entry] = (unsigned char) id;
-                s->has_text[entry] = 0;
+                s->n_text_in[entry] = 0;
                 s->id_off[entry] = 0;
                 s->id_len[entry] = (size_t) -1;
             }
         }
 
         skip_ws(&it, end);
-        if (!parse_attributes(&it, end, data, s, entry))
+        int parsed = parse_attributes(&it, end, data, s, entry);
+        if (parsed < 0)
+            FAIL(ZSG_ERR_NOMEM, tag_start);
+        if (parsed == 0)
             FAIL(ZSG_ERR_SYNTAX, tag_start);
         if (it < end && *it == '>') {
             if (entry >= 0) {
@@ -384,12 +434,15 @@ void zsg_scan_free(zsg_scan *s)
 {
     free(s->parent);
     free(s->tag);
-    free(s->has_text);
+    free(s->n_text_in);
+    free(s->attrs);
     free(s->id_off);
     free(s->id_len);
     s->parent = NULL;
     s->tag = NULL;
-    s->has_text = NULL;
+    s->n_text_in = NULL;
+    s->attrs = NULL;
+    s->n_attr = s->attr_cap = 0;
     s->id_off = NULL;
     s->id_len = NULL;
     s->n = s->cap = 0;

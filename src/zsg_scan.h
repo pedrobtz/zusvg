@@ -33,6 +33,18 @@ typedef struct {
     int images;          /* 0: refuse any <image> element */
 } zsg_limits;
 
+/* The attributes the pre-scan records, for what R reports about a document
+ * (clip paths, design D15). The id is recorded separately. */
+#define ZSG_ATTR_COUNT 9
+const char *zsg_attr_name(int attr);
+
+typedef struct {
+    size_t elem;          /* index of the element entry */
+    int name;             /* 1-based index into zsg_attr_name() */
+    size_t off;           /* byte offset of the trimmed value */
+    size_t len;
+} zsg_attr;
+
 /* The seventeen elements plutosvg builds, as zsg_tag_name() names them.
  * Every other element is skipped with its subtree, as the loader does. */
 #define ZSG_TAG_COUNT 17
@@ -49,9 +61,13 @@ typedef struct {
     size_t cap;
     int *parent;          /* index of the parent entry, or -1 */
     unsigned char *tag;   /* 1-based index into zsg_tag_name() */
-    unsigned char *has_text; /* a <text> start tag in its subtree */
+    size_t *n_text_in;    /* <text> start tags in its subtree */
     size_t *id_off;       /* byte offset of the id value */
     size_t *id_len;       /* its length; (size_t) -1 when there is no id */
+    /* Recorded attributes, in document order. */
+    size_t n_attr;
+    size_t attr_cap;
+    zsg_attr *attrs;
 } zsg_scan;
 
 /* Scans data[0, n) under the limits. Returns scan->status. The arrays are
