@@ -1,0 +1,41 @@
+# Valgrind suppressions for the valgrind job in native-checks.yaml. tools/
+# is .Rbuildignore'd, so nothing here reaches the tarball.
+#
+# R's cairo bitmap device (grDevices png(type = "cairo")) leaks inside
+# cairo/pixman when it draws a raster and when it opens: the blocks belong
+# to the device, not to zusvg. test-render.R's "grid and graphics draw the
+# raster" opens png() and draws a nativeRaster to check that grid and base
+# graphics take zusvg's output, which is what provokes them. Matched on
+# R's cairo frames, so a leak from zusvg's own code is still reported.
+{
+   R-cairo-device-raster
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   ...
+   fun:Cairo_Raster
+}
+{
+   R-cairo-device-open
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   ...
+   fun:CairoInitGroups
+}
+{
+   R-cairo-device-new-page
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   ...
+   fun:BM_NewPage
+}
+{
+   R-cairo-device-in-cairo
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   ...
+   fun:in_Cairo
+}
