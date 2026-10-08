@@ -37,7 +37,7 @@ r <- svg_render(icon, width = 64, color = "steelblue")   # a nativeRaster
 plot.new(); rasterImage(r, 0, 0, 1, 1)
 
 svg_png(icon, "house.png", width = 128)                   # a PNG file
-a <- svg_render(icon, width = 64, as = "array")           # rsvg::rsvg()'s shape
+a <- svg_render(icon, width = 64, as = "array")           # the shape rsvg's rsvg() returns
 ```
 
 `svg_load()` checks untrusted input under limits on size, element count,
