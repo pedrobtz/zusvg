@@ -166,7 +166,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 2 — `svg_render()` with `as = "native"`; shape tests; fixtures · M
 
-**Status:** not started.
+**Status:** in review.
 
 **Do**
 
@@ -181,6 +181,14 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 - Every fixture renders to its pinned hash on every CI platform (the determinism claim, first checked here). If arm64 and x86-64 differ, find whether floating-point contraction is the cause and decide design §18 Q9 in this stage.
 - Rendering 1 000 icons at 64 by 64 leaves resident size flat.
+
+**What actually happened**
+
+- **plutovg draws straight into the `nativeRaster`.** `plutovg_surface_create_for_data()` wraps the R integer vector, allocated in R first, so an allocation failure is a `zusvg_memory_error` before any plutovg object exists. Converting from premultiplied ARGB to straight RGBA then runs in place, and on little-endian that is R's packed colour. There is no surface copy and no surface external pointer: nothing calls R between creating the surface and destroying it.
+- **`zusvg_render_error` and `zusvg_memory_error`** are tested through an internal fault hook (`fail` in `zsg_render_native()`). Neither path can be reached from valid input once the sizes are checked.
+- **The corpus is the project's 31 fixtures.** The `resvg` subsets wait until their licence is confirmed (`fixtures/README.md`).
+- **A contact sheet was checked by eye**, and it found plutosvg ignoring a `<use>`'s `width` and `height` on a `<symbol>` (design §9, §18 Q10, recommended for Stage 3).
+- **CRAN-run tests compare pixels within one level.** Exact hashes run under `skip_on_cran()` (D14).
 
 ---
 

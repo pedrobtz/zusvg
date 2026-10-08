@@ -9,5 +9,7 @@ SEXP zusvg_build_info(void);
 SEXP zusvg_load(SEXP x, SEXP width, SEXP height, SEXP limits, SEXP images);
 SEXP zusvg_status_names(void);
 SEXP zusvg_doc_alive(SEXP ptr);
+SEXP zusvg_render_native(SEXP ptr, SEXP buf, SEXP box, SEXP background,
+                         SEXP color, SEXP fail);
 
 #endif
