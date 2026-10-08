@@ -31,7 +31,7 @@ The audience is the people who use `rsvg` today for icons, logos, plot-element s
 
 - `<text>` and `<tspan>`: plutosvg has no text support and no font dependency (§9). Documents with text render without it; §6.4 says how that is reported.
 - `<filter>`, `<mask>`, `<pattern>`, `<marker>`, `<style>` sheets, `class` and CSS selectors, animation, scripting, external references: not implemented by plutosvg. Unknown elements are skipped with their subtree, as the library does. The `style=""` attribute is parsed for presentation properties (*read 2026-10-08*), so inline styles do work.
-- `<clipPath>` and the `clip-path` property, for now: plutosvg 0.0.8 parses `<clipPath>` but marks it `TODO` and never applies it (*read 2026-10-08*: `plutosvg.c:23`; the attribute is parsed and unused), so clipped content renders unclipped. Whether zusvg patches it in, warns, or waits for upstream is §18 Q8.
+- `<clipPath>` and the `clip-path` property, for now: plutosvg 0.0.8 parses `<clipPath>` but marks it `TODO` and never applies it (*read 2026-10-08*: `plutosvg.c:23`; the attribute is parsed and unused), so clipped content renders unclipped. For 0.1.0, a document whose clip is not a full-canvas rectangle warns (§6.4); the patch that applies clips follows after 0.1.0 (D15).
 - Embedded images other than base64 `data:` URIs holding PNG or JPEG, which is all plutosvg resolves; no file or network references.
 - Vector output (PDF, PostScript, SVG-to-SVG) that `rsvg` offers through cairo: zusvg has no cairo and does not emulate it.
 - An R graphics device that writes SVG. That is a different package (an `svglite` peer) and a different library.
@@ -66,6 +66,24 @@ These are zusvg's cells for the family table that alignment rule R1 of [`zu-fami
 | Language | en-GB (R2) |
 
 Within the family it adopts conventions rather than setting any: the vendor rules of zucbor (§13 there) and the template's "Vendored native code" section, alignment rules R1 to R3 and R10, classed conditions, tests on class. It consumes `zufast` for UTF-8 validation of the input (`zuf_utf8_valid()`, *verified 2026-10-08*) and for number formatting in messages, and nothing from `zubin`, `zuxml` or `zucbor`: plutosvg brings its own XML-shaped tokenizer and zusvg does not parse SVG itself. A later `svg_document()` accessor over `zuxml` is §18. `zukomp` (*verified 2026-10-08*: it exports `komp_compress()`, `komp_decompress()`, `komp_detect()`) supplies gzip for `.svgz` from R, and from Stage 6 the zlib stream inside PNG's `IDAT` through its C API (`inst/include/zukomp-r.h`, `R_GetCCallable()`; *read 2026-10-08*). PNG needs zukomp's `zlib` codec, not raw deflate, because `IDAT` is a zlib stream and `stb_image_write`'s hook must return one (§7). The internal prefix is `zsg_`: `zsv_` was the RFC's choice, but zucsv vendors the zsv CSV library, which defines about 160 `zsv_*` and `ZSV_*` identifiers (*read 2026-10-08*), and `zsg_` occurs in no sibling.
+
+**The feature survey** (Stage 0, 2026-10-08; §18 Q6). It counted files containing each feature plutosvg 0.0.8 does not render.
+
+| Corpus | Files | Text, filter, mask, pattern, marker, `<style>` | Clip paths | Any unsupported feature |
+|---|---|---|---|---|
+| Font Awesome Free 7.3.1 | 2 883 | 0% | 0% | 0% |
+| Bootstrap Icons 1.13.1 | 2 078 | 0% | 0% | 0% (`class=` everywhere, never with a `<style>`) |
+| Material Design Icons 0.14.15, five styles | 10 610 | 0% | 0.01% (one no-op) | 0.01% |
+| Lucide 1.53.0 | 2 133 | 0% | 0% | 0% (`class=` everywhere, never with a `<style>`) |
+| SVGs in 94 installed R packages | 688 | text 92%, `<style>` 20% | 77% | 97% |
+
+Every Font Awesome, Bootstrap and Lucide icon depends on `currentColor`; none uses `var(--`, `<image>` or `<foreignObject>`. Three kinds of file account for the R-package corpus:
+
+- Lifecycle badges are 513 of its 688 files. Each is text on a pill whose clip only rounds the corners.
+- Terminal recordings (callr, cli, pak and others) are text and a `<style>` sheet.
+- `svglite` plots need their `<style>` rules even to stroke a line.
+
+Clip paths alone change the picture in 8 of 688 R-package files (hex-sticker logos and plot panels). About 97% of the clips found are a full-canvas rectangle, which changes nothing. So the audience of §1 holds for icons and logos and does not extend to R-generated plots, badges or diagrams. D3 stands, and §1 and the package help page say what the audience is not. Clip paths are D15.
 
 **Consumers.** None named; RFC 0008 §18 names "zusvg paths into content streams" as a later possibility for `zupdf`. Nothing in 0.1.0 is shaped around it.
 
@@ -143,7 +161,7 @@ R colours go through `grDevices::col2rgb(alpha = TRUE)` in R, so every name, `#r
 
 ### 6.4 What does not render
 
-A document is never refused for using a feature plutosvg lacks: the library skips what it does not know, and an icon with a stray `<title>` must still render. But text is the feature callers will miss, so the pre-scan records whether `<text` occurs and each rendering call (`svg_render()`, `svg_png()`, `svg_jpeg()`) signals one `zusvg_text_skipped` warning for its document, with the count, unless `quiet = TRUE`. The warning is classed, so `suppressWarnings(classes = "zusvg_text_skipped")` works on every R zusvg supports (the argument arrived in R 4.0.0). Clip paths (§2) are the other gap a caller will see; whether they warn the same way is part of §18 Q8.
+A document is never refused for using a feature plutosvg lacks: the library skips what it does not know, and an icon with a stray `<title>` must still render. But text is the feature callers will miss, so the pre-scan records whether `<text` occurs and each rendering call (`svg_render()`, `svg_png()`, `svg_jpeg()`) signals one `zusvg_text_skipped` warning for its document, with the count, unless `quiet = TRUE`. The warning is classed, so `suppressWarnings(classes = "zusvg_text_skipped")` works on every R zusvg supports (the argument arrived in R 4.0.0). Clip paths (§2) warn the same way, as `zusvg_clip_skipped`, unless every clip the document references is a full-canvas rectangle, which changes nothing (D15).
 
 ---
 
@@ -177,21 +195,22 @@ The known threat is floating-point contraction. Matrix mapping, dash flattening,
 Facts read from the source that shape the design:
 
 - **Loader.** `plutosvg_document_load_from_data(data, length, width, height, destroy_func, closure)` (`length = -1` means `strlen()`) is a single iterative loop over the bytes: it skips a BOM, the XML declaration, comments, CDATA and a DOCTYPE with its internal subset, builds elements for the seventeen tags it knows (`svg`, `g`, `defs`, `symbol`, `use`, `image`, `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`, `linearGradient`, `radialGradient`, `stop`, `clipPath`), and skips any other element with its subtree. Entities are not expanded (there is no `&` handling at all), so there is no entity-expansion attack. It returns `NULL` on any error with no reason, which is why zusvg's pre-scan exists: to reject the cases it can name before the loader rejects them silently. On that failure path it has already called `destroy_func(closure)` (*read 2026-10-08*: `plutosvg.c:1173,1478`), so zusvg's copy of the bytes is released by the callback and never freed a second time. Attribute values and ids point into `data` for the document's life (`plutosvg.h:92`), hence the copy (§4).
-- **Allocation.** Elements and attributes are bump-allocated from chunked heaps whose `malloc()` is unchecked (`heap_alloc()`), so an out-of-memory condition is a null dereference, not a `NULL` return. The same holds for `heap_create()`, `document_create()` and `hashmap_create()` in plutosvg, and for `plutovg_canvas_create()`, `plutovg_path_create()` and the array `realloc` macro in `plutovg-utils.h` (*read 2026-10-08*). zusvg's `max_size` and `max_elements` bound what the heaps can grow to, which is the only defence short of a patch; §17 D4 records the patch.
+- **Allocation.** Elements and attributes are bump-allocated from chunked heaps whose `malloc()` is unchecked (`heap_alloc()`), so an out-of-memory condition is a null dereference, not a `NULL` return. The same holds for `heap_create()`, `document_create()` and `hashmap_create()` in plutosvg, and for `plutovg_canvas_create()`, `plutovg_path_create()` and the array `realloc` macro in `plutovg-utils.h` (*read 2026-10-08*). zusvg's `max_size` and `max_elements` bound what the heaps can grow to. Patch `0002-loader-alloc-checks` makes every plutosvg loader allocation fail through the loader's own error path, so the load returns `NULL` (§17 D4). plutovg's growth arrays (`plutovg_array_ensure()`) are left unchecked: they have no failure path, and adding one touches every caller. What they grow to is bounded by `max_pixels` and the path complexity `max_size` allows, and Stage 5's allocation-failure job tests what is left.
 - **Rendering recursion.** `render_element()` recurses once per nesting level and once per `<use>` hop. `has_cycle_reference()` stops a `<use>` that refers to an element already on the render stack. 0.0.8's `MAX_RENDER_DEPTH` of 256 is counted only in `render_children()`; `render_use()` calls `render_element()` on its target directly, so the counter does not move (*read 2026-10-08*: `plutosvg.c:2168-2176`, `2571-2580`). The consequences:
   - A chain of distinct `<use>` elements (a→b→c→…) recurses on the C stack to the chain's length, uncapped. A file of about a megabyte can overflow the stack.
   - Fan-out (§12) is not bounded either.
   - The pre-scan's `max_depth` bounds lexical nesting only.
 
   D4's depth patch is therefore required. It counts `<use>` hops against the same depth as `render_children()`.
-- **Images.** `<image href>` resolves only base64 `data:image/png`, `data:image/jpg` and `data:image/jpeg` URIs (`plutosvg.c:2460-2467`), decoded by plutovg's vendored `stb_image` 2.30 (`STBI_rgb_alpha`), whose JPEG and PNG decoders have a history of CVEs. zusvg compiles with `-DSTBI_NO_BMP -DSTBI_NO_PSD -DSTBI_NO_TGA -DSTBI_NO_GIF -DSTBI_NO_HDR -DSTBI_NO_PIC -DSTBI_NO_PNM`, which `stb_image` honours from the compiler line without editing the file (each is `#ifdef`-tested). `images = FALSE` makes the pre-scan refuse any `<image` element before decoding. `STBI_NO_STDIO` and `STBI_WRITE_NO_STDIO` must not be set, because `plutovg-surface.c` calls the stdio entry points and would not compile. The fuzz corpus includes embedded images.
+- **Images.** `<image href>` resolves only base64 `data:image/png`, `data:image/jpg` and `data:image/jpeg` URIs (`plutosvg.c:2460-2467`), decoded by plutovg's vendored `stb_image` 2.30 (`STBI_rgb_alpha`), whose JPEG and PNG decoders have a history of CVEs. zusvg compiles with `-DSTBI_NO_BMP -DSTBI_NO_PSD -DSTBI_NO_TGA -DSTBI_NO_GIF -DSTBI_NO_HDR -DSTBI_NO_PIC -DSTBI_NO_PNM`, which `stb_image` honours from the compiler line without editing the file (each is `#ifdef`-tested). `images = FALSE` makes the pre-scan refuse any `<image` element before decoding. `STBI_NO_STDIO` and `STBI_WRITE_NO_STDIO` must not be set, because `plutovg-surface.c` calls the stdio entry points and would not compile. `STBI_NO_THREAD_LOCALS` is set. Under emulated thread-local storage (GCC on macOS, MinGW on Windows), stb_image's thread-local failure reason links libgcc's `__emutls_*` helpers, which reference `abort()` and are exported from the shared object (*found at Stage 0*). The fuzz corpus includes embedded images.
 - **Surfaces.** `plutovg_surface_create()` refuses a dimension at or above 32768 (`kMaxSize = 1 << 15`) and returns `NULL` on `malloc()` failure, which zusvg reports as `zusvg_memory_error`. It has no overflow check on `height * stride` (*read 2026-10-08*, correcting the RFC's reading of the 1.3.3 notes); §6.1 says how zusvg keeps sizes inside it.
-- **Clip paths.** `TAG_CLIP_PATH` carries a `TODO`, and nothing in the renderer reads `clip-path` (*read 2026-10-08*). §2 and §18 Q8.
+- **Clip paths.** `TAG_CLIP_PATH` carries a `TODO`, and nothing in the renderer reads `clip-path` (*read 2026-10-08*). §2 and D15.
 - **Fonts.** plutovg's `plutovg-font.c` carries `stb_truetype`, a font face cache, a mutex and a system font directory scan. The file cannot be left out, because `plutovg-canvas.c` calls into it. plutosvg never calls any font function. The mutex is a `CRITICAL_SECTION` under `_WIN32` (with `windows.h`), C11 `mtx_t` under `HAVE_THREADS_H`, and a no-op otherwise. zusvg does not define `HAVE_THREADS_H`, and it defines `PLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD`, which compiles out the directory scan and its `mmap()` and `dirent` use, so nothing reads the file system. The symbols are hidden with the rest.
 - **Standard and libraries.** plutosvg builds as C99 and plutovg as C11 (`gnu11` in its Meson file); both need `-lm` and nothing else. R's default C standard is C17 or later, so `src/Makevars` sets nothing.
-- **stdio and asserts.** The libraries write to no standard stream and call no `printf`, `puts`, `abort`, `exit` or `rand` (*read 2026-10-08*). `fopen()`, `fread()` and `fwrite()` appear only in file entry points zusvg does not call (`plutosvg_document_load_from_file()`, `plutovg-font.c`'s file loader, `stb_image`'s and `stb_image_write`'s stdio paths). `snprintf()` appears in `plutovg-font.c`. `assert()` appears about fifteen times: `plutovg-blend.c`, `-font.c` (including `assert(false)`), `-ft-stroker.c` and `-path.c`, plus the `stb` headers' default `STBI_ASSERT` and `STBIW_ASSERT`. R's `-DNDEBUG` removes all of them in an installed build, and `load_all()`'s `-UNDEBUG` keeps them, which is why `tools/check-symbols` runs on an `R CMD INSTALL` build. The template's rule applies regardless. `tools/check-symbols` runs `nm -u` on the built objects and fails on:
+- **Linkage of the stb APIs.** plutovg includes each stb header with `static` linkage. Static stb functions that plutovg never calls (68 of them) each draw `-Wunused-function` under `-Wall`, and R CMD check counts any `warning: unused` line as significant (*found at Stage 0*). `src/Makevars` therefore sets `STBIDEF`, `STBIWDEF` and `STBTT_DEF` to `extern`, which `$(C_VISIBILITY)` keeps hidden. `STBTT_DEF` needed the `#ifndef` guard of patch `0003`. External linkage keeps code the compiler would otherwise drop, and the HDR writer's `sprintf()` came with it; patch `0005` makes it `snprintf()`.
+- **stdio and asserts.** The libraries write to no standard stream and call no `printf`, `puts`, `abort`, `exit` or `rand` (*read 2026-10-08*). `stb_image_write`'s HDR header uses `sprintf()`, which patch `0005` replaces. `fopen()`, `fread()` and `fwrite()` appear only in file entry points zusvg does not call (`plutosvg_document_load_from_file()`, `plutovg-font.c`'s file loader, `stb_image`'s and `stb_image_write`'s stdio paths). `snprintf()` appears in `plutovg-font.c`. `assert()` appears about fifteen times: `plutovg-blend.c`, `-font.c` (including `assert(false)`), `-ft-stroker.c` and `-path.c`, plus the `stb` headers' default `STBI_ASSERT` and `STBIW_ASSERT`. R's `-DNDEBUG` removes all of them in an installed build, and `load_all()`'s `-UNDEBUG` keeps them, which is why `tools/check-symbols` runs on an `R CMD INSTALL` build. The template's rule applies regardless. `tools/check-symbols` runs `nm -u` on the built objects and fails on:
   - `stdout`, `stderr` and the stream symbols clang rewrites `fprintf()` into (`fwrite` against `__stderrp`);
-  - `printf`, `fprintf`, `fputs`, `puts`;
+  - `printf`, `fprintf`, `fputs`, `puts`, `sprintf`, `vsprintf`;
   - `abort`, `exit`, `assert` (`__assert_fail`, `__assert_rtn`);
   - `rand` and the rest of the system RNG.
 
@@ -229,7 +248,7 @@ A `.svgz` file or a gzip-magic raw vector is decompressed with `zukomp::komp_dec
 | `zusvg_io_error` | a file or connection could not be read or written |
 | `zusvg_unsupported_input` | `.svgz` while `zukomp` is not a dependency (§10) |
 
-Warnings: `zusvg_text_skipped` (§6.4). Every class inherits `zusvg_error` (or `zusvg_warning`); the parse error carries `offset` when the pre-scan found the fault and `NA` when the loader did, since the loader gives no position. Statuses come back from C by enumerator name and R raises (`zucbor`'s convention). Tests assert on class.
+Warnings: `zusvg_text_skipped` and `zusvg_clip_skipped` (§6.4). Every class inherits `zusvg_error` (or `zusvg_warning`); the parse error carries `offset` when the pre-scan found the fault and `NA` when the loader did, since the loader gives no position. Statuses come back from C by enumerator name and R raises (`zucbor`'s convention). Tests assert on class.
 
 ---
 
@@ -257,20 +276,28 @@ The document's bytes and its plutosvg object live in one external pointer; the s
 
 ## 14. Build, portability and CRAN
 
-- `src/Makevars` lists the object files by hand: the 12 vendored ones (11 plutovg, `plutosvg.c`) plus the project's (`init.c` at Stage 0, then `zsg_scan.c`, `zsg_doc.c`, `zsg_render.c` and `zsg_r.c`, 17 in all from Stage 2). Portable make only, no `Makevars.win`. `PKG_CFLAGS = $(C_VISIBILITY) -I vendor/plutovg/include -I vendor/plutosvg/source -DPLUTOVG_BUILD_STATIC -DPLUTOSVG_BUILD_STATIC -DPLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD` plus the `STBI_NO_*` list of §9; never `-DPLUTOVG_BUILD` or `-DPLUTOSVG_BUILD`, which export the API (§4). `PKG_LIBS = -lm`.
+- `src/Makevars` lists the object files by hand: the 12 vendored ones (11 plutovg, `plutosvg.c`) plus the project's (`init.c` at Stage 0, then `zsg_scan.c`, `zsg_doc.c`, `zsg_render.c` and `zsg_r.c`, 17 in all from Stage 2). Portable make only, no `Makevars.win`. `PKG_CFLAGS = $(C_VISIBILITY)`. `PKG_CPPFLAGS` holds:
+  - `-Ivendor/plutovg/include -Ivendor/plutosvg/source`;
+  - `-DPLUTOVG_BUILD_STATIC -DPLUTOSVG_BUILD_STATIC`, and never `-DPLUTOVG_BUILD` or `-DPLUTOSVG_BUILD`, which export the API (§4);
+  - `-DSTBIDEF=extern -DSTBIWDEF=extern -DSTBTT_DEF=extern` (§9);
+  - `-DPLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD`;
+  - the `STBI_NO_*` list of §9 and `-DSTBI_NO_THREAD_LOCALS`.
+
+  `PKG_LIBS = -lm`. `src/Makevars` gives the reason for each.
 - `_WIN32` paths in `plutovg-font.c` include `windows.h` and use a `CRITICAL_SECTION` for the font cache's mutex; they compile under Rtools' MinGW and UCRT, and the cache is never used. The ASan, UBSan, valgrind, LTO, rchk and gctorture jobs run as in zucbor; the fuzz job builds the pre-scan and the loader under libFuzzer.
-- Compiler warnings from the vendored trees under `-Wall -Wextra -pedantic` are recorded in Stage 0; any that CRAN's own flags would print are fixed by a recorded patch (D4), not by silencing, and never by a diagnostic-suppressing pragma, which draws its own NOTE.
+- R CMD check also reports any diagnostic-suppressing pragma in the sources. stb_truetype's `#pragma GCC diagnostic ignored "-Wcast-qual"` is removed by patch `0006`, since `-Wcast-qual` is in neither `-Wall` nor `-Wextra`.
+- Compiler warnings from the vendored trees under `-Wall -Wextra -pedantic` are recorded in Stage 0 (`src/vendor/PROVENANCE`; under CRAN's `-Wall -pedantic`, clang and GCC now print none); any that CRAN's own flags would print are fixed by a recorded patch (D4), not by silencing, and never by a diagnostic-suppressing pragma, which draws its own NOTE.
 - No system dependency: `SystemRequirements` is empty, which is the package's reason to exist.
 - `LinkingTo: zufast (>= 0.1.0)`, with `Remotes: pedrobtz/zufast@main` during development only (R10.2). CRAN order (R10.5): after `zufast`, which on 2026-10-08 carries `Version: 0.1.0` but no tag and is not yet submitted. `zukomp` (submitted 2026-10-06, not yet accepted) must be on CRAN before Stage 6 adds it to `LinkingTo` and `Imports`. If it is not by then, `.svgz` stays `zusvg_unsupported_input` for 0.1.0 and PNG keeps `stb_image_write`'s deflate.
-- `Imports: grDevices` (`col2rgb()`); `Suggests` names every package a test, example or vignette uses (`rsvg`, `png`, `jpeg`, `grid`, `ggplot2`, `testthat`, `withr`, `knitr`, `rmarkdown`).
+- `Imports: grDevices` (`col2rgb()`, from Stage 2); `Suggests` names every package a test, example or vignette uses (`rsvg`, `png`, `jpeg`, `grid`, `ggplot2`, `testthat`, `withr`, `knitr`, `rmarkdown`).
 - Licence MIT with the vendored notices (§9); `Language: en-GB`; `.Rbuildignore` covers `.agents/`, `.claude/`, `tools/`, `fuzz/`.
 
 ---
 
 ## 15. Testing
 
-- **Fixtures.** `tests/testthat/fixtures/` holds a project corpus of SVGs with pinned rendered hashes: each element type, each `preserveAspectRatio` value, gradients with each spread method and both unit systems, clip paths (pinning what §18 Q8 decides, unclipped until then), `use` of symbols and of elements, a long `<use>` chain (pinning D4's depth patch), nested svg, `currentColor` and `var()`, embedded PNG and JPEG, text (to pin the warning), `.svgz`, and the `resvg` test suite's `structure` and `painting` subsets that use only supported features (CC0, pulled by `tools/update-fixtures`, never by hand; `tests/testthat/fixtures/README.md` lists sources and licences).
-- **Cross-check.** Where `rsvg` is installed, each supported fixture renders through both and the mean absolute channel difference is bounded (anti-aliasing and un-premultiply rounding differ; shapes must not); Stage 3 sets the bound from the fixtures and records it here. Fixtures using clip paths are excluded until §18 Q8 is settled. This runs in the `conformance` job only, since `rsvg` is a `Suggests` that CRAN need not have.
+- **Fixtures.** `tests/testthat/fixtures/` holds a project corpus of SVGs with pinned rendered hashes: each element type, each `preserveAspectRatio` value, gradients with each spread method and both unit systems, clip paths (pinning the warning, and the unclipped pixels until D15's patch), `use` of symbols and of elements, a long `<use>` chain (pinning D4's depth patch), nested svg, `currentColor` and `var()`, embedded PNG and JPEG, text (to pin the warning), `.svgz`, and the `resvg` test suite's `structure` and `painting` subsets that use only supported features (CC0, pulled by `tools/update-fixtures`, never by hand; `tests/testthat/fixtures/README.md` lists sources and licences).
+- **Cross-check.** Where `rsvg` is installed, each supported fixture renders through both and the mean absolute channel difference is bounded (anti-aliasing and un-premultiply rounding differ; shapes must not); Stage 3 sets the bound from the fixtures and records it here. Fixtures whose clip changes pixels are excluded until D15's patch lands. This runs in the `conformance` job only, since `rsvg` is a `Suggests` that CRAN need not have.
 - **Shape tests.** Each `as` value's class, dim and a few pinned pixels; `rasterGrob()` and `rasterImage()` draw the native output in a `png()` device, and the test reads the file back with `png::readPNG()` and compares pixels within a tolerance, since the device's bytes depend on its platform backend.
 - **Pinned hashes on CRAN.** Exact render hashes are compared under `skip_on_cran()` and in the conformance job; the tests CRAN runs compare pinned pixels within one level per channel, so an FMA difference on a CRAN machine (§8) cannot fail the check.
 - **Limits and faults.** Every class of §11 with a crafted input, the pre-scan's offsets, the loader's `NA` offset, each limit at its boundary.
@@ -309,18 +336,25 @@ Measured by `tools/run-benchmarks` against `rsvg` and `magick` where installed, 
 | D12 | Licence fields | `MIT + file LICENSE`, `Copyright: file inst/COPYRIGHTS`, `cph` entries for both libraries, `inst/COPYRIGHTS` with the FTL text; zuhtml's precedent (*this document's reading of the RFC's §9, which said the same without the precedent*) |
 | D13 | Internal prefix | `zsg_` / `ZSG_`, not the RFC's `zsv_` (§3; *read 2026-10-08*) |
 | D14 | Exact hashes | checked in CI's conformance job and under `skip_on_cran()`; CRAN's tests use a one-level pixel tolerance (§15) |
+| D15 | Clip paths | for 0.1.0, a `zusvg_clip_skipped` warning when a document references a clip path that is not a full-canvas rectangle, with `has_clip` in `svg_elements()`; a patch applying `clip-path`, offered upstream, after 0.1.0 (§3's survey; §18 Q8) |
 
 Reasons where they are not in the section cited:
 
-- **D1.** nanosvg is older, unmaintained since 2022 and single-header; plutosvg is maintained, used by FreeType for colour emoji, separates parser from rasteriser, and has `<use>`, `<symbol>` and the `var()` palette. Clip paths are not a reason for the choice: the RFC counted them in plutosvg's favour, but 0.0.8 does not apply them (*read 2026-10-08*; §18 Q8).
+- **D1.** nanosvg is older, unmaintained since 2022 and single-header; plutosvg is maintained, used by FreeType for colour emoji, separates parser from rasteriser, and has `<use>`, `<symbol>` and the `var()` palette. Clip paths are not a reason for the choice: the RFC counted them in plutosvg's favour, but 0.0.8 does not apply them (*read 2026-10-08*; D15).
 - **D2.** It is what R's graphics take and it is 8× smaller. `as = "array"` is one argument away for drop-in use.
-- **D3.** Text needs fonts, fonts need a system font lookup or bundled fonts, and either breaks the no-dependency promise.
-- **D4.** The expected set:
-  - `NULL` checks on every unchecked allocation §9 lists, not only `heap_alloc()`.
-  - A depth count in `render_use()` sharing `MAX_RENDER_DEPTH` with `render_children()`. This is required: 0.0.8's cap does not cover `<use>` chains (*read 2026-10-08*, §9).
-  - From Stage 6, the one-line `STBIW_ZLIB_COMPRESS` prototype (§7).
-  - Whatever §18 Q2, Q8 and Q9 decide.
-  - Whatever Stage 0's `-Wall -Wextra -pedantic` build and `tools/check-symbols` demand.
+- **D3.** Text needs fonts, fonts need a system font lookup or bundled fonts, and either breaks the no-dependency promise. The Stage 0 survey (§3) confirmed it: no icon in the four sets surveyed uses text.
+- **D4.** The set after Stage 0, in `tools/patches/`:
+  - `0001-use-depth`: `<use>` hops count against `MAX_RENDER_DEPTH`. This is required: 0.0.8's cap does not cover `<use>` chains (§9). `tools/check-use-chain` shows a 30 000-hop chain (about 1 MB) crashing without it.
+  - `0002-loader-alloc-checks`: every plutosvg loader allocation is checked (§9 says what is left).
+  - `0003-stbtt-def-guard`: `#ifndef STBTT_DEF`, so the build chooses its linkage (§9).
+  - `0004-stroker-unused-point`: a variable GCC's `-Wall` reports as set but not used.
+  - `0005-stbiw-snprintf`: the HDR writer's `sprintf()` (§9).
+  - `0006-stbtt-no-pragmas`: the diagnostic-suppressing pragmas (§14).
+
+  Expected later:
+  - from Stage 6, the one-line `STBIW_ZLIB_COMPRESS` prototype (§7);
+  - whatever §18 Q2 and Q9 decide;
+  - after 0.1.0, D15's clip patch.
 
   A patch upstream accepts is dropped at the next pin.
 - **D5.** plutosvg is not an XML parser (no entities, no namespaces, lax closing), so an XML parser's judgement would differ from the loader's in both directions.
@@ -336,14 +370,9 @@ Each stays the maintainer's until recorded above; the recommendation is the RFC'
 3. `svg_document()` returning the parsed tree as an R list over `zuxml` for callers who want to inspect or edit, and `svg_write()` to emit it back: a different feature, likely a different package.
 4. A cairo-free vector output through `zupdf` (RFC 0008): plutovg's path model maps onto PDF content streams, so SVG-to-PDF without rendering is possible once both packages exist.
 5. Whether `svg_jpeg()` belongs at all; it is three lines over plutovg and `rsvg` has no equivalent. Recommended: keep it; the cost is nil and `background = "white"` makes it correct by default.
-6. **The feature survey** (*from the RFC's §21*): whether plutosvg's feature set is enough for the users `rsvg` has. A survey of SVGs in CRAN packages and in the icon sets R users pull (Font Awesome, Bootstrap Icons, Material, Lucide) is Stage 0's second task. It counts text, filters, `<style>` sheets and `class`, masks, and since the 2026-10-08 reading clip paths (Q8). A result that most need text or filters changes D3 or the package's audience.
+6. **The feature survey.** *Decided at Stage 0*: the results are in §3. D3 stands, and the audience is icons and logos, not R-generated plots, badges or diagrams.
 7. **The name.** `zusvg` says "zu-family SVG" but the package rasterises rather than reads or writes the format as the others do; `zusvgr` or similar is for the maintainer. Renaming is free until the first tag.
-8. **Clip paths** (*from the 2026-10-08 reading*). plutosvg 0.0.8 does not apply `<clipPath>` (§9), and icons exported from design tools often use one. Three options:
-   - (a) A D4 patch that implements it with plutovg's canvas clip and is sent upstream.
-   - (b) A `zusvg_clip_skipped` warning on the pattern of `zusvg_text_skipped`, with `has_clip` in `svg_elements()`.
-   - (c) Waiting for upstream.
-
-   Recommended: (b) for 0.1.0 at least, which costs one pre-scan flag. Choose (a) if the Stage 0 survey (Q6) shows clip paths are common in the icon sets.
+8. **Clip paths.** *Decided at Stage 0*: D15. The survey (§3) found clipping alone visible in 0.01% of icons and about 1% of R-package SVGs, so the 0.1.0 answer is a warning, and the patch follows after 0.1.0. The warning skips full-canvas rectangles, which are 97% of the clips found and would make it noise.
 9. **Floating-point contraction** (*from the 2026-10-08 reading*). If Stage 2 finds arm64 and x86-64 hashes differ (§8), the options are:
    - (a) A D4 patch adding `#pragma STDC FP_CONTRACT OFF` to the float-heavy plutovg files. Clang honours this pragma; GCC ignores it and would need its own per-function attribute.
    - (b) Withdrawing byte-identity across architectures from §8 and §19, and keeping it per architecture.
@@ -368,6 +397,6 @@ Each stays the maintainer's until recorded above; the recommendation is the RFC'
 
 - The patch set's exact content, which the first build and the first fuzz run determine (D4).
 - Whether `zukomp` is on CRAN in time for Stage 6; if not, `.svgz` and the better PNG compression move past 0.1.0 (§14).
-- §18 Q6 and Q7: the audience and the name.
-- §18 Q8 and Q9: clip paths, and whether floating-point contraction breaks byte-identity across architectures.
+- §18 Q7: the name.
+- §18 Q9: whether floating-point contraction breaks byte-identity across architectures.
 - Two values that later stages record here: the `rsvg` cross-check's bound (Stage 3, §15) and the benchmarks (Stage 6, §16).

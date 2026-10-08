@@ -1,0 +1,57 @@
+# Portable make only: every object is listed by hand, since R compiles only
+# src/*.c on its own and $(wildcard) would cost SystemRequirements: GNU make.
+# No -W overrides either; CRAN rejects them. There is no Makevars.win: R on
+# Windows uses this file when that one is absent, which keeps the two from
+# drifting. See .agents/design.md §9 and §14.
+#
+# *_BUILD_STATIC empties PLUTOVG_API and PLUTOSVG_API. Never define
+# PLUTOVG_BUILD or PLUTOSVG_BUILD: without *_BUILD_STATIC they mark the whole
+# vendored API visibility("default") (dllexport on Windows), past
+# $(C_VISIBILITY), and tools/check-symbols fails (design §4).
+#
+# STBIDEF, STBIWDEF and STBTT_DEF (the last through tools/patches/0003)
+# give the stb APIs external linkage, hidden by $(C_VISIBILITY), instead of
+# the static linkage plutovg asks for: as static functions, the 68 that
+# plutovg never calls each draw -Wunused-function under CRAN's -Wall, which
+# R CMD check reports as a significant warning.
+#
+# PLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD compiles out plutovg-font.c's system
+# font directory scan; zusvg draws no text (design D3). STBI_NO_* leaves
+# stb_image with only the PNG and JPEG decoders, the formats plutosvg's
+# data: URIs carry (design D6). STBI_NO_STDIO must not be set:
+# plutovg-surface.c calls the stdio entry points.
+#
+# STBI_NO_THREAD_LOCALS keeps stb_image's failure reason and flip flag in
+# plain statics. Under emulated thread-local storage (GCC on macOS, MinGW on
+# Windows) they would link libgcc's __emutls_* helpers, which call abort().
+# zusvg calls stb_image only from R's main thread and never reads either.
+PKG_CPPFLAGS = -Ivendor/plutovg/include -Ivendor/plutosvg/source \
+	-DPLUTOVG_BUILD_STATIC -DPLUTOSVG_BUILD_STATIC \
+	-DSTBIDEF=extern -DSTBIWDEF=extern -DSTBTT_DEF=extern \
+	-DPLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD \
+	-DSTBI_NO_BMP -DSTBI_NO_PSD -DSTBI_NO_TGA -DSTBI_NO_GIF -DSTBI_NO_HDR \
+	-DSTBI_NO_PIC -DSTBI_NO_PNM -DSTBI_NO_THREAD_LOCALS
+PKG_CFLAGS = $(C_VISIBILITY)
+PKG_LIBS = -lm
+
+PLUTOVG_OBJECTS = \
+	vendor/plutovg/source/plutovg-blend.o \
+	vendor/plutovg/source/plutovg-canvas.o \
+	vendor/plutovg/source/plutovg-font.o \
+	vendor/plutovg/source/plutovg-ft-math.o \
+	vendor/plutovg/source/plutovg-ft-raster.o \
+	vendor/plutovg/source/plutovg-ft-stroker.o \
+	vendor/plutovg/source/plutovg-matrix.o \
+	vendor/plutovg/source/plutovg-paint.o \
+	vendor/plutovg/source/plutovg-path.o \
+	vendor/plutovg/source/plutovg-rasterize.o \
+	vendor/plutovg/source/plutovg-surface.o
+
+PLUTOSVG_OBJECTS = \
+	vendor/plutosvg/source/plutosvg.o
+
+OBJECTS = \
+	init.o \
+	zsg_info.o \
+	$(PLUTOVG_OBJECTS) \
+	$(PLUTOSVG_OBJECTS)

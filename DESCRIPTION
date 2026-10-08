@@ -1,14 +1,43 @@
 Package: zusvg
-Title: What the Package Does (One Line, Title Case)
+Title: Render 'SVG' Images Without System Dependencies
 Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Authors@R: c(
+    person("Pedro", "Baltazar", , "pedrobtz@gmail.com", role = c("aut", "cre", "cph")),
+    person("Samuel", "Ugochukwu", role = "cph",
+           comment = "plutosvg and plutovg, bundled in src/vendor"),
+    person("The FreeType Project", role = "cph",
+           comment = "rasteriser and stroker in src/vendor/plutovg/source/plutovg-ft-*"),
+    person("Sean", "Barrett", role = "cph",
+           comment = "stb_image, stb_image_write and stb_truetype in src/vendor/plutovg")
+  )
+Description: Renders 'SVG' documents to native rasters, 'RGBA' arrays and
+    'PNG' or 'JPEG' files with bundled copies of the 'plutosvg' and
+    'plutovg' C libraries, so it installs from source with no system
+    library and draws the same pixels on every platform. Aimed at icons and
+    logos: text, filters, masks, patterns, markers and 'CSS' style sheets
+    are not rendered.
 License: MIT + file LICENSE
-Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.1.0
-Suggests: 
-    testthat (>= 3.0.0)
+Copyright: file inst/COPYRIGHTS
+URL: https://pedrobtz.github.io/zusvg/, https://github.com/pedrobtz/zusvg
+BugReports: https://github.com/pedrobtz/zusvg/issues
+Depends:
+    R (>= 4.1)
+Suggests:
+    ggplot2,
+    grid,
+    jpeg,
+    knitr,
+    png,
+    rmarkdown,
+    rsvg,
+    testthat (>= 3.0.0),
+    withr
+LinkingTo:
+    zufast (>= 0.1.0)
+Remotes:
+    pedrobtz/zufast@main
+Config/roxygen2/version: 8.1.0
 Config/testthat/edition: 3
-URL: https://pedrobtz.github.io/zusvg/
+Encoding: UTF-8
+Language: en-GB
+Roxygen: list(markdown = TRUE)

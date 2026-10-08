@@ -1,0 +1,20 @@
+Subject: Write the HDR header with snprintf(), not sprintf()
+
+stbi_write_hdr_core() formats the Radiance header with sprintf() outside
+MSVC. R CMD check reports any reference to sprintf() in a package's
+compiled code. The buffer is a fixed 128 bytes, so snprintf() with its
+size gives the same output.
+
+zusvg: .agents/design.md §9. Offered upstream.
+
+--- a/plutovg/source/plutovg-stb-image-write.h
++++ b/plutovg/source/plutovg-stb-image-write.h
+@@ -773,7 +773,7 @@
+ #ifdef __STDC_LIB_EXT1__
+       len = sprintf_s(buffer, sizeof(buffer), "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
+ #else
+-      len = sprintf(buffer, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
++      len = snprintf(buffer, sizeof(buffer), "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
+ #endif
+       s->func(s->context, buffer, len);
+ 

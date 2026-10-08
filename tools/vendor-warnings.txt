@@ -1,0 +1,22 @@
+Compiler warnings from the vendored trees, Stage 0 first build (2026-10-08),
+macOS arm64, R 4.6.1, Apple clang and GCC 16, with the flags and patches
+above:
+
+  -Wall -pedantic (CRAN's flags), clang and GCC: none. Before patches 0003
+  and 0004 and the STBIDEF/STBIWDEF/STBTT_DEF flags, 68 -Wunused-function
+  (stb API functions plutovg never calls) and, under GCC, one
+  -Wunused-but-set-variable (plutovg-ft-stroker.c); R CMD check counts both
+  as significant warnings.
+
+  -Wall -Wextra -pedantic, adding (counts per file; same under both
+  compilers unless noted), left unpatched because CRAN's flags do not print
+  them:
+    plutosvg.c             3 -Wsign-compare, 3 -Wmissing-field-initializers
+                           (2 under GCC)
+    plutovg-blend.c        10 -Wunused-parameter
+    plutovg-font.c         7 -Wunused-parameter, 1 -Wsign-compare
+    plutovg-ft-stroker.c   1 -Wsign-compare
+    plutovg-path.c         1 -Wunused-parameter
+
+  Linux (GCC, clang) and Windows (Rtools) builds: see the R-CMD-check legs
+  of the Stage 0 pull request.

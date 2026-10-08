@@ -1,0 +1,38 @@
+# Watch plutosvg and plutovg for releases, from the shared reusable workflow
+# in pedrobtz/r-actions.
+#
+# vendor.yaml guards against drift; this guards against staleness. A new tag
+# opens an issue; the pin moves in its own pull request through
+# tools/update-plutosvg, dropping any patch upstream has taken. It never
+# fails a check.
+on:
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+name: vendor-upstream
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  plutosvg:
+    uses: pedrobtz/r-actions/.github/workflows/vendor-upstream.yml@bdfde5edd37f25b33af142a4a881585e77bda3c2 # v1.22.0
+    permissions:
+      contents: read
+      issues: write
+    with:
+      upstream-repo: sammycage/plutosvg
+      current-version: sed -n 's/^#define ZSG_PLUTOSVG_TAG "\(.*\)"$/\1/p' src/zsg_vendor.h
+      tag-pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$'
+
+  plutovg:
+    uses: pedrobtz/r-actions/.github/workflows/vendor-upstream.yml@bdfde5edd37f25b33af142a4a881585e77bda3c2 # v1.22.0
+    permissions:
+      contents: read
+      issues: write
+    with:
+      upstream-repo: sammycage/plutovg
+      current-version: sed -n 's/^#define ZSG_PLUTOVG_TAG "\(.*\)"$/\1/p' src/zsg_vendor.h
+      tag-pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$'

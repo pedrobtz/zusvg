@@ -1,0 +1,24 @@
+Subject: Drop the unused point cursor in ft_stroke_border_get_counts()
+
+ft_stroke_border_get_counts() advances a `point` cursor it never reads.
+GCC's -Wall reports it (-Wunused-but-set-variable), which R CMD check
+counts as a significant warning. FreeType's own ftstroke.c dropped the
+variable for the same reason.
+
+zusvg: .agents/design.md §14. Offered upstream.
+
+--- a/plutovg/source/plutovg-ft-stroker.c
++++ b/plutovg/source/plutovg-ft-stroker.c
+@@ -532,11 +532,10 @@
+     PVG_FT_UInt  num_contours = 0;
+ 
+     PVG_FT_UInt    count = border->num_points;
+-    PVG_FT_Vector* point = border->points;
+     PVG_FT_Byte*   tags = border->tags;
+     PVG_FT_Int     in_contour = 0;
+ 
+-    for (; count > 0; count--, num_points++, point++, tags++) {
++    for (; count > 0; count--, num_points++, tags++) {
+         if (tags[0] & PVG_FT_STROKE_TAG_BEGIN) {
+             if (in_contour != 0) goto Fail;
+ 

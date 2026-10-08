@@ -1,0 +1,30 @@
+Subject: Let the compiler line choose STBTT_DEF
+
+stb_image and stb_image_write let the includer choose the linkage of their
+API (#ifndef STBIDEF, #ifndef STBIWDEF); stb_truetype does not, so
+plutovg-font.c's STBTT_STATIC makes every stbtt_* function static, and the
+thirty that plutovg never calls each draw -Wunused-function under -Wall,
+which R CMD check reports as a significant warning.
+
+Guard STBTT_DEF the same way, so a build can define it (zusvg passes
+-DSTBTT_DEF=extern, with the symbols hidden by -fvisibility=hidden).
+Unchanged when STBTT_DEF is not defined.
+
+zusvg: .agents/design.md §14. Offered upstream.
+
+--- a/plutovg/source/plutovg-stb-truetype.h
++++ b/plutovg/source/plutovg-stb-truetype.h
+@@ -499,11 +499,13 @@
+ #ifndef PLUTOVG_STB_TRUETYPE_H
+ #define PLUTOVG_STB_TRUETYPE_H
+ 
++#ifndef STBTT_DEF
+ #ifdef STBTT_STATIC
+ #define STBTT_DEF static
+ #else
+ #define STBTT_DEF extern
+ #endif
++#endif
+ 
+ #ifdef __cplusplus
+ extern "C" {

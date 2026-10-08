@@ -1,0 +1,8 @@
+# plutosvg files vendored into src/vendor/plutosvg/, as paths inside the
+# release tarball; each is copied byte-for-byte to the same relative path.
+# source/plutosvg-ft.h is left out: plutosvg.c includes it only under
+# PLUTOSVG_HAS_FREETYPE, which zusvg never defines (.agents/design.md §9).
+# CMake, Meson, the examples and the submodule wrap are left out too.
+source/plutosvg.c
+source/plutosvg.h
+LICENSE

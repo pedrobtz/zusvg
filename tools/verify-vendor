@@ -1,0 +1,130 @@
+#!/bin/sh
+# Verify that src/vendor/plutosvg and src/vendor/plutovg are the pinned
+# release archives plus exactly the patch series in tools/patches/, byte for
+# byte, and that src/vendor/PROVENANCE and src/zsg_vendor.h agree with them.
+# Exits non-zero on any difference. Run from the package root.
+#
+#   tools/verify-vendor            the gate
+#   tools/verify-vendor --canary   the gate's canary: re-derive the trees with
+#                                  the first patch left out and require
+#                                  verification to FAIL
+set -eu
+
+CANARY=0
+[ "${1:-}" = "--canary" ] && CANARY=1
+
+PROV="src/vendor/PROVENANCE"
+[ -f "$PROV" ] || { echo "missing $PROV" >&2; exit 1; }
+
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+FAILURES="$WORK/failures"
+: > "$FAILURES"
+TREE="$WORK/tree"
+mkdir "$TREE"
+
+# field <library> <key>: a value from that library's block of PROVENANCE.
+field() {
+  awk -v lib="$1" -v key="  $2:" '
+    /^[a-z]/ { on = ($1 == lib) }
+    on && index($0, key) == 1 { print $NF; exit }' "$PROV"
+}
+
+for lib in plutosvg plutovg; do
+  tag=$(field "$lib" "Release tag")
+  url=$(field "$lib" "Archive")
+  expected=$(field "$lib" "SHA-256")
+  [ -n "$tag" ] && [ -n "$url" ] && [ -n "$expected" ] ||
+    { echo "FAIL: $PROV has no complete $lib block" >&2; exit 1; }
+  echo "==> pinned $lib $tag"
+  # --retry, because this runs on every push in CI. Integrity does not rest
+  # on the transport: the SHA-256 comparison below is what decides.
+  curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused \
+    -o "$WORK/$lib.tar.gz" "$url"
+  actual=$(shasum -a 256 "$WORK/$lib.tar.gz" | cut -d' ' -f1)
+  if [ "$actual" != "$expected" ]; then
+    echo "FAIL: $lib archive sha256 mismatch" >&2
+    echo "  expected $expected" >&2
+    echo "  actual   $actual" >&2
+    exit 1
+  fi
+  mkdir "$WORK/$lib"
+  tar xzf "$WORK/$lib.tar.gz" -C "$WORK/$lib"
+  src="$WORK/$lib/$lib-${tag#v}"
+  grep -v '^#' "tools/$lib-files.txt" | grep -v '^[[:space:]]*$' |
+    while read -r f; do
+      mkdir -p "$TREE/$lib/$(dirname "$f")"
+      cp "$src/$f" "$TREE/$lib/$f"
+    done
+done
+echo "==> both archives match their recorded sha256"
+
+# The patch series must be exactly what PROVENANCE lists, in order.
+awk '/^  Local patches:/ {on = 1; next} on && /^ +[^ ]+\.patch$/ {print $1; next} on {exit}' \
+  "$PROV" > "$WORK/listed"
+ls tools/patches/*.patch 2>/dev/null | xargs -n1 basename > "$WORK/present" || true
+cmp -s "$WORK/listed" "$WORK/present" ||
+  echo "FAIL: tools/patches/ does not match the patch list in $PROV" >> "$FAILURES"
+
+first=1
+while read -r p; do
+  if [ "$CANARY" -eq 1 ] && [ "$first" -eq 1 ]; then
+    echo "==> canary: leaving out $p"
+    first=0
+    continue
+  fi
+  first=0
+  patch -s -p1 -d "$TREE" < "tools/patches/$p" ||
+    echo "FAIL: tools/patches/$p does not apply cleanly" >> "$FAILURES"
+done < "$WORK/present"
+find "$TREE" \( -name '*.orig' -o -name '*.rej' \) -delete
+
+# Every derived file must match, and nothing may be present that the
+# derivation did not produce. Build artefacts are ignored: R builds in place.
+(cd "$TREE" && find . -type f | sort) > "$WORK/derived"
+(cd src/vendor && find plutosvg plutovg -type f \
+  ! -name '*.o' ! -name '*.so' ! -name '*.dll' ! -name '*.dylib' ! -name '*.a' |
+  sed 's|^|./|' | sort) > "$WORK/local"
+while read -r f; do
+  if [ ! -f "src/vendor/$f" ]; then
+    echo "FAIL: src/vendor/${f#./} is missing" >> "$FAILURES"
+  elif ! cmp -s "$TREE/$f" "src/vendor/$f"; then
+    echo "FAIL: src/vendor/${f#./} differs from upstream plus patches" >> "$FAILURES"
+  fi
+done < "$WORK/derived"
+comm -13 "$WORK/derived" "$WORK/local" | while read -r f; do
+  echo "FAIL: src/vendor/${f#./} is not in a file list" >> "$FAILURES"
+done
+
+# src/zsg_vendor.h, which zusvg_info() reports, must name what is pinned.
+ids=$(sed 's/\.patch$//' "$WORK/present" | paste -sd, -)
+for pair in "PLUTOSVG_TAG $(field plutosvg 'Release tag')" \
+  "PLUTOSVG_COMMIT $(field plutosvg Commit)" \
+  "PLUTOVG_TAG $(field plutovg 'Release tag')" \
+  "PLUTOVG_COMMIT $(field plutovg Commit)" \
+  "PATCHES $ids"; do
+  set -- $pair
+  want="${2:-}"
+  got=$(sed -n "s/^#define ZSG_$1 \"\(.*\)\"$/\1/p" src/zsg_vendor.h)
+  [ "$got" = "$want" ] ||
+    echo "FAIL: src/zsg_vendor.h has ZSG_$1 \"$got\", expected \"$want\"" >> "$FAILURES"
+done
+
+count=$(wc -l < "$WORK/derived" | tr -d ' ')
+npatch=$(wc -l < "$WORK/present" | tr -d ' ')
+
+if [ "$CANARY" -eq 1 ]; then
+  if [ -s "$FAILURES" ]; then
+    echo "==> canary OK: verification failed with a patch left out"
+    exit 0
+  fi
+  echo "CANARY FAILED: verification passed with a patch left out" >&2
+  exit 1
+fi
+
+if [ -s "$FAILURES" ]; then
+  cat "$FAILURES" >&2
+  echo "==> vendor trees FAILED verification" >&2
+  exit 1
+fi
+echo "==> vendor trees verified ($count files, plutosvg and plutovg plus $npatch patches)"
