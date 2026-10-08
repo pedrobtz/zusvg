@@ -33,6 +33,7 @@ plutovg
                  0010-ft-coord-clamp.patch
                  0011-stbi-idct-wide.patch
                  0012-dash-budget.patch
+                 0013-stroker-empty-border.patch
                  0014-stbiw-jpg-unsigned-bits.patch
 
 src/vendor/plutosvg/ and src/vendor/plutovg/ are the files listed in

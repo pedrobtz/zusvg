@@ -1,0 +1,22 @@
+Subject: Skip exporting an empty stroke border
+
+ft_stroke_border_export() memcpy()s border->points even when the border
+has no points, and an empty border's point array is NULL: passing NULL to
+memcpy() is undefined behaviour even with a zero length (UBSan
+nonnull-attribute). A polygon whose points list breaks off after one
+point, stroked, reaches it -- found by zusvg's fuzzer. There is nothing to
+export, so return first.
+
+zusvg: .agents/design.md §9. Offered upstream.
+
+--- a/plutovg/source/plutovg-ft-stroker.c
++++ b/plutovg/source/plutovg-ft-stroker.c
+@@ -568,6 +568,8 @@
+                                     PVG_FT_Outline*     outline)
+ {
+     /* copy point locations */
++    if (border->num_points == 0)
++        return;
+     memcpy(outline->points + outline->n_points, border->points,
+            border->num_points * sizeof(PVG_FT_Vector));
+ 

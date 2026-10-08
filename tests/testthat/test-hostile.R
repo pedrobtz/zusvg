@@ -61,3 +61,8 @@ test_that("the fan-out fuzz shape is stopped by the step budget (0009)", {
   txt <- svg_text(paste0("<defs>", lv, '</defs><use href="#a8"/>'))
   expect_zusvg_error(svg_render(txt), "zusvg_limit_error", limit = "render_steps")
 })
+
+test_that("a stroked polygon cut short after one point exports no border (0013)", {
+  txt <- '<svg xmlns="http://www.w3.org/2000/svg" width="32" hei0ght="32"><polygon points="16,2\'30,28 2,28" fill="#ffc914" stroke="#000"/></svg>'
+  expect_s3_class(svg_render(txt, width = 64), "nativeRaster")
+})

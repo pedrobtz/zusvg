@@ -364,6 +364,7 @@ Reasons where they are not in the section cited:
   - `0010-ft-coord-clamp` (Stage 5): coordinates, stroke width and miter limit clamped before the fixed-point casts. The fuzzer found undefined behaviour at `3e38` and in a document scaled by `1e16`.
   - `0011-stbi-idct-wide` (Stage 5): the scalar JPEG IDCT in 64-bit integers. The fuzzer found signed overflow from crafted coefficients.
   - `0012-dash-budget` (Stage 5): D18. The fuzzer found a dash explosion that ran out of memory and, in single precision, never ended.
+  - `0013-stroker-empty-border` (Stage 5): a NULL `memcpy()` source when stroking a one-point polygon. CI's fuzzer, on Linux x86-64, found it.
 
   Expected later:
   - from Stage 6, the one-line `STBIW_ZLIB_COMPRESS` prototype (§7);
