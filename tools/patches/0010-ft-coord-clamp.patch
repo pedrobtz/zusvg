@@ -1,0 +1,60 @@
+Subject: Clamp coordinates, stroke width and miter limit before the fixed-point casts
+
+FT_COORD() casts round(x * 64) to PVG_FT_Pos (long), and
+ft_outline_convert_stroke() casts the scaled stroke width and the miter
+limit the same way. A value out of range, infinite or NaN -- a polygon
+point of 3e38, or a stroke in a document scaled by 1e16, both found by
+zusvg's fuzzer -- makes the cast undefined behaviour (UBSan
+float-cast-overflow) and the stroker's fixed-point trigonometry overflow;
+where long is 32 bits (Windows), far smaller values already overflow the
+FreeType raster's arithmetic.
+
+ft_coord() maps NaN to 0 and clamps to +-65536 pixels, twice the largest
+surface plutovg_surface_create() makes, in double before the cast; the
+stroke half-width goes through it too, and the miter limit is capped at
+32767. Geometry inside those ranges is unchanged.
+
+zusvg: .agents/design.md §9. Offered upstream.
+
+--- a/plutovg/source/plutovg-rasterize.c
++++ b/plutovg/source/plutovg-rasterize.c
+@@ -189,7 +189,24 @@
+     free(outline);
+ }
+ 
+-#define FT_COORD(x) (PVG_FT_Pos)(roundf(x * 64))
++/* 26.6 fixed point, clamped: the cast of a NaN, an infinity or a value out
++ * of range is undefined, and the FreeType raster's long arithmetic (32 bits
++ * on Windows) must not overflow. 65536 pixels is twice the largest surface
++ * plutovg_surface_create() makes. */
++#define FT_COORD_MAX (65536.0 * 64.0)
++static PVG_FT_Pos ft_coord(double x)
++{
++    double v = x * 64.0;
++    if(v != v)
++        return 0;
++    if(v < -FT_COORD_MAX)
++        return -(PVG_FT_Pos)FT_COORD_MAX;
++    if(v > FT_COORD_MAX)
++        return (PVG_FT_Pos)FT_COORD_MAX;
++    return (PVG_FT_Pos)round(v);
++}
++
++#define FT_COORD(x) ft_coord(x)
+ static void ft_outline_move_to(PVG_FT_Outline* ft, float x, float y)
+ {
+     ft->points[ft->n_points].x = FT_COORD(x);
+@@ -305,8 +322,11 @@
+     double scale = hypot(scale_x, scale_y) / PLUTOVG_SQRT2;
+     double width = stroke_data->style.width * scale;
+ 
+-    PVG_FT_Fixed ftWidth = (PVG_FT_Fixed)(width * 0.5 * (1 << 6));
+-    PVG_FT_Fixed ftMiterLimit = (PVG_FT_Fixed)(stroke_data->style.miter_limit * (1 << 16));
++    PVG_FT_Fixed ftWidth = (PVG_FT_Fixed)ft_coord(width * 0.5);
++    double miter_limit = stroke_data->style.miter_limit;
++    if(!(miter_limit < 32767.0))
++        miter_limit = 32767.0;
++    PVG_FT_Fixed ftMiterLimit = (PVG_FT_Fixed)(miter_limit * (1 << 16));
+ 
+     PVG_FT_Stroker_LineCap ftCap;
+     switch(stroke_data->style.cap) {

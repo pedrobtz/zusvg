@@ -65,8 +65,7 @@ zsg_encode <- function(x, file, format, quality, call, width = NULL, height = NU
     switch(out,
       ZSG_ERR_NOMEM = zsg_abort("zusvg_memory_error",
         "out of memory while rendering or encoding the image", call = call),
-      ZSG_ERR_RENDER = zsg_abort("zusvg_render_error",
-        "plutosvg could not render the document", call = call),
+      ZSG_ERR_RENDER = zsg_steps_error(call),
       ZSG_ERR_ENCODE = zsg_abort("zusvg_render_error",
         "the image could not be encoded", call = call),
       zsg_invalid_argument("x", "`x` is not a live document.", call)

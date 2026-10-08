@@ -25,12 +25,21 @@
 # plain statics. Under emulated thread-local storage (GCC on macOS, MinGW on
 # Windows) they would link libgcc's __emutls_* helpers, which call abort().
 # zusvg calls stb_image only from R's main thread and never reads either.
+#
+# STBI_MAX_DIMENSIONS=4096 refuses an embedded image wider or taller than
+# 4096 pixels before decoding it: a kilobyte of JPEG can declare 32768 by
+# 32768 pixels, a 4 GB decode (design D19, found by the fuzzer).
+#
+# STBI_NO_SIMD makes every platform decode embedded JPEGs with the same
+# scalar IDCT (patched by tools/patches/0011): x86-64 would otherwise use
+# SSE2 and arm64 the scalar code, two paths to keep identical and to fuzz.
 PKG_CPPFLAGS = -Ivendor/plutovg/include -Ivendor/plutosvg/source \
 	-DPLUTOVG_BUILD_STATIC -DPLUTOSVG_BUILD_STATIC \
 	-DSTBIDEF=extern -DSTBIWDEF=extern -DSTBTT_DEF=extern \
 	-DPLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD \
 	-DSTBI_NO_BMP -DSTBI_NO_PSD -DSTBI_NO_TGA -DSTBI_NO_GIF -DSTBI_NO_HDR \
-	-DSTBI_NO_PIC -DSTBI_NO_PNM -DSTBI_NO_THREAD_LOCALS
+	-DSTBI_NO_PIC -DSTBI_NO_PNM -DSTBI_NO_THREAD_LOCALS -DSTBI_NO_SIMD \
+	-DSTBI_MAX_DIMENSIONS=4096
 PKG_CFLAGS = $(C_VISIBILITY)
 PKG_LIBS = -lm
 

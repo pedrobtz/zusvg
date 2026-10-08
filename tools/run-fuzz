@@ -1,0 +1,65 @@
+#!/bin/sh
+# libFuzzer over the pre-scan, plutosvg's loader and a render (roadmap
+# Stage 5; .agents/design.md §15). Usage, from the package root:
+#
+#   tools/run-fuzz [seconds]        default 60
+#
+# The canary (fuzz/fuzz_canary.c) must crash first, through the same code
+# and flags, or the gate is not trusted. The grown corpus is kept in
+# $FUZZ_CORPUS (default fuzz/corpus), which CI caches between runs so that
+# fuzzing time accumulates. Each input has a time budget (-timeout): an input
+# that takes longer is a finding, which is how slow documents are found.
+# Needs a clang with libFuzzer (Apple's has none; Homebrew's llvm does).
+set -eu
+
+SECS=${1:-60}
+CC=${FUZZ_CC:-clang}
+CORPUS=${FUZZ_CORPUS:-fuzz/corpus}
+. tools/fuzz-env
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+# The -D set must be src/Makevars'.
+for d in $ZSG_DEFS; do
+  grep -q -- "$d" src/Makevars || { echo "FAIL: $d is in tools/fuzz-env but not src/Makevars" >&2; exit 2; }
+done
+for d in $(grep -o -- '-D[A-Za-z0-9_=]*' src/Makevars); do
+  echo " $ZSG_DEFS " | grep -q -- " $d " || { echo "FAIL: $d is in src/Makevars but not tools/fuzz-env" >&2; exit 2; }
+done
+
+printf 'int LLVMFuzzerTestOneInput(const unsigned char *d, unsigned long n) { (void) d; (void) n; return 0; }\n' > "$WORK/probe.c"
+if ! $CC -fsanitize=fuzzer "$WORK/probe.c" -o "$WORK/probe" 2>/dev/null; then
+  echo "run-fuzz: $CC has no libFuzzer runtime; set FUZZ_CC to one that does" >&2
+  exit 2
+fi
+
+FLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=fuzzer,address,undefined
+       -fno-sanitize-recover=undefined -UNDEBUG $ZSG_DEFS $ZSG_INCS"
+$CC $FLAGS fuzz/fuzz_canary.c src/zsg_scan.c -o "$WORK/fuzz_canary"
+$CC $FLAGS fuzz/fuzz_svg.c src/zsg_scan.c $ZSG_VENDOR_SRCS -lm -o "$WORK/fuzz_svg"
+
+mkdir -p "$WORK/seeds" "$CORPUS" "$WORK/artifacts"
+cp tests/testthat/fixtures/*.svg "$WORK/seeds/"
+
+# 1. The canary must crash.
+if "$WORK/fuzz_canary" -runs=100000 -artifact_prefix="$WORK/canary-" "$WORK/seeds" > "$WORK/canary.log" 2>&1; then
+  echo "FAIL: the canary did not crash; the fuzz gate cannot be trusted" >&2
+  exit 2
+fi
+ls "$WORK"/canary-* > /dev/null 2>&1 || { echo "FAIL: the canary exited without a crash artifact" >&2; exit 2; }
+echo "==> canary crashed, as it must"
+
+# 2. The target, for SECS seconds, over the cached corpus and the seeds.
+status=0
+"$WORK/fuzz_svg" -max_total_time="$SECS" -max_len=65536 -timeout=10 \
+  -rss_limit_mb=4096 -dict=fuzz/svg.dict -artifact_prefix="$WORK/artifacts/" \
+  "$CORPUS" "$WORK/seeds" > "$WORK/fuzz.log" 2>&1 || status=$?
+tail -5 "$WORK/fuzz.log"
+if [ "$status" != 0 ] || [ -n "$(ls -A "$WORK/artifacts")" ]; then
+  echo "FAIL: fuzz_svg found a crash, leak or timeout (exit $status):" >&2
+  ls "$WORK/artifacts" >&2
+  grep -m 20 -E "ERROR|SUMMARY|timeout" "$WORK/fuzz.log" >&2 || true
+  mkdir -p fuzz/artifacts && cp "$WORK/artifacts"/* fuzz/artifacts/ 2>/dev/null || true
+  exit 1
+fi
+echo "==> fuzz_svg: ${SECS}s, no finding; corpus now $(ls "$CORPUS" | wc -l | tr -d ' ') inputs"

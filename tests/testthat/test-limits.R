@@ -51,3 +51,19 @@ test_that("max_size bounds what a connection is read for", {
   expect_zusvg_error(svg_load(con, max_size = 100), "zusvg_limit_error",
                      limit = "max_size")
 })
+
+test_that("a <use> fan-out is stopped by the render step budget", {
+  # Each level uses the previous one ten times: 12 levels would draw 10^12
+  # rects from a document of about 2 KB.
+  lv <- '<g id="l0"><rect width="1" height="1"/></g>'
+  for (i in 1:12) {
+    uses <- paste0(rep(sprintf('<use href="#l%d"/>', i - 1), 10), collapse = "")
+    lv <- paste0(lv, sprintf('<g id="l%d">%s</g>', i, uses))
+  }
+  txt <- svg_text(paste0("<defs>", lv, '</defs><use href="#l12"/>'))
+  expect_lt(nchar(txt), 3000)
+  elapsed <- system.time(
+    expect_zusvg_error(svg_render(txt), "zusvg_limit_error", limit = "render_steps")
+  )[["elapsed"]]
+  expect_quick(elapsed, 10)
+})

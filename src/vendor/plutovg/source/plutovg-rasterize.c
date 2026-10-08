@@ -189,7 +189,24 @@ static void ft_outline_destroy(PVG_FT_Outline* outline)
     free(outline);
 }
 
-#define FT_COORD(x) (PVG_FT_Pos)(roundf(x * 64))
+/* 26.6 fixed point, clamped: the cast of a NaN, an infinity or a value out
+ * of range is undefined, and the FreeType raster's long arithmetic (32 bits
+ * on Windows) must not overflow. 65536 pixels is twice the largest surface
+ * plutovg_surface_create() makes. */
+#define FT_COORD_MAX (65536.0 * 64.0)
+static PVG_FT_Pos ft_coord(double x)
+{
+    double v = x * 64.0;
+    if(v != v)
+        return 0;
+    if(v < -FT_COORD_MAX)
+        return -(PVG_FT_Pos)FT_COORD_MAX;
+    if(v > FT_COORD_MAX)
+        return (PVG_FT_Pos)FT_COORD_MAX;
+    return (PVG_FT_Pos)round(v);
+}
+
+#define FT_COORD(x) ft_coord(x)
 static void ft_outline_move_to(PVG_FT_Outline* ft, float x, float y)
 {
     ft->points[ft->n_points].x = FT_COORD(x);
@@ -305,8 +322,11 @@ static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, con
     double scale = hypot(scale_x, scale_y) / PLUTOVG_SQRT2;
     double width = stroke_data->style.width * scale;
 
-    PVG_FT_Fixed ftWidth = (PVG_FT_Fixed)(width * 0.5 * (1 << 6));
-    PVG_FT_Fixed ftMiterLimit = (PVG_FT_Fixed)(stroke_data->style.miter_limit * (1 << 16));
+    PVG_FT_Fixed ftWidth = (PVG_FT_Fixed)ft_coord(width * 0.5);
+    double miter_limit = stroke_data->style.miter_limit;
+    if(!(miter_limit < 32767.0))
+        miter_limit = 32767.0;
+    PVG_FT_Fixed ftMiterLimit = (PVG_FT_Fixed)(miter_limit * (1 << 16));
 
     PVG_FT_Stroker_LineCap ftCap;
     switch(stroke_data->style.cap) {

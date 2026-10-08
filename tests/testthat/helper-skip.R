@@ -24,3 +24,17 @@ expect_flat_rss <- function(f, n, kb) {
   gc()
   expect_lt(rss_kb() - before, kb)
 }
+
+# Under valgrind (Linux: its preload library is mapped into the process)
+# everything runs some 50 times slower, so a time bound proves nothing.
+running_under_valgrind <- function() {
+  maps <- "/proc/self/maps"
+  file.exists(maps) && any(grepl("vgpreload", readLines(maps, warn = FALSE), fixed = TRUE))
+}
+
+# `elapsed` seconds within `limit`, relaxed thirtyfold under valgrind: the
+# point is that the work is bounded, which a hang would still fail.
+expect_quick <- function(elapsed, limit) {
+  if (running_under_valgrind()) limit <- limit * 30
+  expect_lt(elapsed, limit)
+}

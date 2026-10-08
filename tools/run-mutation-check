@@ -1,0 +1,105 @@
+#!/bin/sh
+# Proves every limit guard is load-bearing (.agents/design.md §12; roadmap
+# Stage 5): each guard, marked by a "GUARD: name" comment on the line
+# before its `if`, is disabled in turn in a scratch copy, and its hostile
+# input must then get a different answer. A guard whose removal changes
+# nothing was never doing anything. Run from the package root.
+#
+#   C guards (src/zsg_scan.c) through fuzz/probe.c, the R-free pre-scan.
+#   R guards (R/*.R) through the package loaded from a mutated copy.
+set -eu
+
+CC=${CC:-cc}
+. tools/fuzz-env
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+: > "$WORK/failed"
+
+# mutate FILE GUARD OUT: OUT is FILE with the `if (COND)` after the guard's
+# marker made `if (0 && (COND))` (C) or `if (FALSE && (COND))` (R).
+mutate() {
+  awk -v g="GUARD: $2" -v f="$([ "${1##*.}" = R ] && echo FALSE || echo 0)" '
+    found && /if \(/ && !done {
+      sub(/if \(/, "if (" f " \\&\\& (")
+      sub(/\)( \{)?$/, ")&")
+      done = 1
+    }
+    index($0, g) && $0 ~ g "( |\\*|$)" { found = 1 }
+    { print }' "$1" > "$3"
+}
+
+# ---- C guards -------------------------------------------------------------
+# guard | document | max_size max_elements max_depth images | status with the guard
+c_cases='
+max_size|<svg width="1" height="1"><g/><g/><g/></svg>|20 100 100 1|ZSG_ERR_SIZE
+max_elements|<svg width="1" height="1"><g/><g/><g/></svg>|1000 3 100 1|ZSG_ERR_ELEMENTS
+max_depth|<svg width="1" height="1"><g><g><g/></g></g></svg>|1000 100 3 1|ZSG_ERR_DEPTH
+images|<svg width="1" height="1"><image/></svg>|1000 100 100 0|ZSG_ERR_IMAGE
+'
+build() {  # build DIR OUT
+  $CC -O1 $ZSG_DEFS -I"$1" -I"$ZUFAST_INC" fuzz/probe.c "$1/zsg_scan.c" -o "$2"
+}
+build src "$WORK/probe"
+echo "$c_cases" | while IFS='|' read -r guard doc limits want; do
+  [ -n "$guard" ] || continue
+  printf '%s' "$doc" > "$WORK/doc.svg"
+  got=$("$WORK/probe" "$WORK/doc.svg" $limits)
+  if [ "$got" != "$want" ]; then
+    echo "FAIL: $guard: gives $got with the guard, expected $want" >&2; echo 1 >> "$WORK/failed"; continue
+  fi
+  n=$(grep -c "GUARD: $guard \*/" src/zsg_scan.c || true)
+  [ "$n" = 1 ] || { echo "FAIL: $guard: $n markers in src/zsg_scan.c, expected 1" >&2; echo 1 >> "$WORK/failed"; continue; }
+  mkdir -p "$WORK/m-$guard"
+  cp src/zsg_scan.h "$WORK/m-$guard/"
+  mutate src/zsg_scan.c "$guard" "$WORK/m-$guard/zsg_scan.c"
+  if cmp -s src/zsg_scan.c "$WORK/m-$guard/zsg_scan.c"; then
+    echo "FAIL: $guard: the mutation did not apply" >&2; echo 1 >> "$WORK/failed"; continue
+  fi
+  build "$WORK/m-$guard" "$WORK/probe-$guard"
+  mutant=$("$WORK/probe-$guard" "$WORK/doc.svg" $limits 2>/dev/null) || mutant="a crash (exit $?)"
+  if [ "$mutant" = "$want" ]; then
+    echo "FAIL: $guard: removing the guard changes nothing" >&2; echo 1 >> "$WORK/failed"
+  else
+    echo "==> C $guard: $want with the guard, $mutant without"
+  fi
+done
+
+# ---- R guards -------------------------------------------------------------
+# guard | file | R expression that must raise zusvg_limit_error with the guard
+r_cases='
+max_size (before the copy into C; the pre-scan checks again)|R/load.R|zusvg:::zsg_input_bytes(as.raw(1:20), 10, NULL)
+max_size (reading)|R/read.R|zusvg:::zsg_read_bounded(rawConnection(as.raw(1:20)), 10, "x", NULL)
+dimension|R/render.R|zusvg:::zsg_render_size(c(0, 0, 1, 1), 40000, 1, 1, Inf, NULL)
+max_pixels|R/render.R|zusvg:::zsg_render_size(c(0, 0, 1, 1), 100, 100, 1, 10, NULL)
+'
+mkdir -p "$WORK/pkg"
+tar --exclude=.git --exclude='*.o' --exclude='*.so' -cf - . | tar -xf - -C "$WORK/pkg"
+Rscript -e 'suppressMessages(pkgload::load_all(commandArgs(TRUE)[1], quiet = TRUE))' "$WORK/pkg" > /dev/null 2>&1
+echo "$r_cases" | while IFS='|' read -r guard file expr; do
+  [ -n "$guard" ] || continue
+  n=$(grep -cF "# GUARD: $guard" "$file" || true)
+  [ "$n" = 1 ] || { echo "FAIL: $guard: $n markers in $file, expected 1" >&2; echo 1 >> "$WORK/failed"; continue; }
+  cp "$file" "$WORK/orig.R"
+  awk -v g="# GUARD: $guard" '
+    found && /if \(/ && !done { sub(/if \(/, "if (FALSE \\&\\& ("); sub(/\) \{$/, ")) {"); done = 1 }
+    index($0, g) { found = 1 }
+    { print }' "$file" > "$WORK/pkg/$file"
+  if cmp -s "$file" "$WORK/pkg/$file"; then
+    echo "FAIL: $guard: the mutation did not apply" >&2; echo 1 >> "$WORK/failed"; continue
+  fi
+  res=$(Rscript -e '
+    suppressMessages(pkgload::load_all(commandArgs(TRUE)[1], quiet = TRUE, compile = FALSE))
+    r <- tryCatch({ eval(parse(text = commandArgs(TRUE)[2])); "no error" },
+                  zusvg_limit_error = function(e) "zusvg_limit_error",
+                  error = function(e) paste("error:", class(e)[1]))
+    cat(r)' "$WORK/pkg" "$expr" 2>/dev/null) || res="R failed"
+  cp "$WORK/orig.R" "$WORK/pkg/$file"
+  if [ "$res" = "zusvg_limit_error" ]; then
+    echo "FAIL: $guard: removing the guard changes nothing" >&2; echo 1 >> "$WORK/failed"
+  else
+    echo "==> R $guard: zusvg_limit_error with the guard, $res without"
+  fi
+done
+
+[ ! -s "$WORK/failed" ] || exit 1
+echo "==> every guard is load-bearing"

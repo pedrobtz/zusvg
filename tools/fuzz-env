@@ -1,0 +1,8 @@
+# Sourced by tools/run-fuzz and tools/run-mutation-check: the R-free build
+# of the pre-scan and the vendored libraries, with src/Makevars' flags.
+# tools/run-fuzz fails if the -D set here drifts from src/Makevars.
+ZUFAST_INC=${ZUFAST_INC:-$(Rscript -e 'cat(system.file("include", package = "zufast"))')}
+[ -n "$ZUFAST_INC" ] || { echo "zufast is not installed; its headers are needed" >&2; exit 2; }
+ZSG_DEFS="-DPLUTOVG_BUILD_STATIC -DPLUTOSVG_BUILD_STATIC -DSTBIDEF=extern -DSTBIWDEF=extern -DSTBTT_DEF=extern -DPLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD -DSTBI_NO_BMP -DSTBI_NO_PSD -DSTBI_NO_TGA -DSTBI_NO_GIF -DSTBI_NO_HDR -DSTBI_NO_PIC -DSTBI_NO_PNM -DSTBI_NO_THREAD_LOCALS -DSTBI_NO_SIMD -DSTBI_MAX_DIMENSIONS=4096"
+ZSG_INCS="-Isrc -Isrc/vendor/plutovg/include -Isrc/vendor/plutosvg/source -I$ZUFAST_INC"
+ZSG_VENDOR_SRCS="src/vendor/plutosvg/source/plutosvg.c $(ls src/vendor/plutovg/source/*.c | tr '\n' ' ')"

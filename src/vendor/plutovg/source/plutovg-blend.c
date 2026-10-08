@@ -161,6 +161,31 @@ void plutovg_memfill32(unsigned int* dest, int length, unsigned int value)
 
 #endif // __SSE2__
 
+/* float to integer conversions that are defined for every input: a NaN is
+ * 0, and values are clamped, so a degenerate transform or gradient cannot
+ * make a cast (or a later addition) undefined. */
+static inline int plutovg_f2i(float v)
+{
+    if(v != v)
+        return 0;
+    if(v <= -1073741824.f)
+        return -1073741824;
+    if(v >= 1073741824.f)
+        return 1073741824;
+    return (int)v;
+}
+
+static inline int64_t plutovg_f2l(float v)
+{
+    if(v != v)
+        return 0;
+    if(v <= -70368744177664.f)
+        return -70368744177664LL;
+    if(v >= 70368744177664.f)
+        return 70368744177664LL;
+    return (int64_t)v;
+}
+
 static inline int gradient_clamp(const gradient_data_t* gradient, int ipos)
 {
     if(gradient->spread == PLUTOVG_SPREAD_METHOD_REPEAT) {
@@ -192,7 +217,7 @@ static inline uint32_t gradient_pixel_fixed(const gradient_data_t* gradient, int
 
 static inline uint32_t gradient_pixel(const gradient_data_t* gradient, float pos)
 {
-    int ipos = (int)(pos * (COLOR_TABLE_SIZE - 1) + 0.5f);
+    int ipos = plutovg_f2i(pos * (COLOR_TABLE_SIZE - 1) + 0.5f);
     return gradient->colortable[gradient_clamp(gradient, ipos)];
 }
 
@@ -214,11 +239,11 @@ static void fetch_linear_gradient(uint32_t* buffer, const linear_gradient_values
 
     const uint32_t* end = buffer + length;
     if(inc > -1e-5f && inc < 1e-5f) {
-        plutovg_memfill32(buffer, length, gradient_pixel_fixed(gradient, (int)(t * FIXPT_SIZE)));
+        plutovg_memfill32(buffer, length, gradient_pixel_fixed(gradient, plutovg_f2i(t * FIXPT_SIZE)));
     } else {
         if(t + inc * length < (float)(INT_MAX >> (FIXPT_BITS + 1)) && t + inc * length > (float)(INT_MIN >> (FIXPT_BITS + 1))) {
-            int t_fixed = (int)(t * FIXPT_SIZE);
-            int inc_fixed = (int)(inc * FIXPT_SIZE);
+            int t_fixed = plutovg_f2i(t * FIXPT_SIZE);
+            int inc_fixed = plutovg_f2i(inc * FIXPT_SIZE);
             while(buffer < end) {
                 *buffer = gradient_pixel_fixed(gradient, t_fixed);
                 t_fixed += inc_fixed;
@@ -734,8 +759,8 @@ static void blend_untransformed_argb(plutovg_surface_t* surface, plutovg_operato
     const int image_width = texture->width;
     const int image_height = texture->height;
 
-    int xoff = (int)(texture->matrix.e);
-    int yoff = (int)(texture->matrix.f);
+    int xoff = plutovg_f2i(texture->matrix.e);
+    int yoff = plutovg_f2i(texture->matrix.f);
 
     int count = span_buffer->spans.size;
     const plutovg_span_t* spans = span_buffer->spans.data;
@@ -774,8 +799,8 @@ static void blend_transformed_argb(plutovg_surface_t* surface, plutovg_operator_
     int image_width = texture->width;
     int image_height = texture->height;
 
-    int fdx = (int)(texture->matrix.a * FIXED_SCALE);
-    int fdy = (int)(texture->matrix.b * FIXED_SCALE);
+    int64_t fdx = plutovg_f2l(texture->matrix.a * FIXED_SCALE);
+    int64_t fdy = plutovg_f2l(texture->matrix.b * FIXED_SCALE);
 
     int count = span_buffer->spans.size;
     const plutovg_span_t* spans = span_buffer->spans.data;
@@ -785,8 +810,8 @@ static void blend_transformed_argb(plutovg_surface_t* surface, plutovg_operator_
         const float cx = spans->x + 0.5f;
         const float cy = spans->y + 0.5f;
 
-        int x = (int)((texture->matrix.c * cy + texture->matrix.a * cx + texture->matrix.e) * FIXED_SCALE);
-        int y = (int)((texture->matrix.d * cy + texture->matrix.b * cx + texture->matrix.f) * FIXED_SCALE);
+        int64_t x = plutovg_f2l((texture->matrix.c * cy + texture->matrix.a * cx + texture->matrix.e) * FIXED_SCALE);
+        int64_t y = plutovg_f2l((texture->matrix.d * cy + texture->matrix.b * cx + texture->matrix.f) * FIXED_SCALE);
 
         int length = spans->len;
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
@@ -824,8 +849,8 @@ static void blend_untransformed_tiled_argb(plutovg_surface_t* surface, plutovg_o
     int image_width = texture->width;
     int image_height = texture->height;
 
-    int xoff = (int)(texture->matrix.e) % image_width;
-    int yoff = (int)(texture->matrix.f) % image_height;
+    int xoff = plutovg_f2i(texture->matrix.e) % image_width;
+    int yoff = plutovg_f2i(texture->matrix.f) % image_height;
 
     if(xoff < 0)
         xoff += image_width;
@@ -875,8 +900,8 @@ static void blend_transformed_tiled_argb(plutovg_surface_t* surface, plutovg_ope
     int image_height = texture->height;
     const int scanline_offset = texture->stride / 4;
 
-    int fdx = (int)(texture->matrix.a * FIXED_SCALE);
-    int fdy = (int)(texture->matrix.b * FIXED_SCALE);
+    int64_t fdx = plutovg_f2l(texture->matrix.a * FIXED_SCALE);
+    int64_t fdy = plutovg_f2l(texture->matrix.b * FIXED_SCALE);
 
     int count = span_buffer->spans.size;
     const plutovg_span_t* spans = span_buffer->spans.data;
@@ -887,8 +912,8 @@ static void blend_transformed_tiled_argb(plutovg_surface_t* surface, plutovg_ope
         const float cx = spans->x + 0.5f;
         const float cy = spans->y + 0.5f;
 
-        int x = (int)((texture->matrix.c * cy + texture->matrix.a * cx + texture->matrix.e) * FIXED_SCALE);
-        int y = (int)((texture->matrix.d * cy + texture->matrix.b * cx + texture->matrix.f) * FIXED_SCALE);
+        int64_t x = plutovg_f2l((texture->matrix.c * cy + texture->matrix.a * cx + texture->matrix.e) * FIXED_SCALE);
+        int64_t y = plutovg_f2l((texture->matrix.d * cy + texture->matrix.b * cx + texture->matrix.f) * FIXED_SCALE);
 
         const int coverage = (spans->coverage * texture->const_alpha) >> 8;
         int length = spans->len;
@@ -941,8 +966,8 @@ static void blend_transformed_bilinear_tiled_argb(plutovg_surface_t* surface, pl
     int image_width = texture->width;
     int image_height = texture->height;
 
-    int fdx = (int)(texture->matrix.a * FIXED_SCALE);
-    int fdy = (int)(texture->matrix.b * FIXED_SCALE);
+    int64_t fdx = plutovg_f2l(texture->matrix.a * FIXED_SCALE);
+    int64_t fdy = plutovg_f2l(texture->matrix.b * FIXED_SCALE);
 
     int count = span_buffer->spans.size;
     const plutovg_span_t* spans = span_buffer->spans.data;
@@ -952,8 +977,8 @@ static void blend_transformed_bilinear_tiled_argb(plutovg_surface_t* surface, pl
         const float cx = spans->x + 0.5f;
         const float cy = spans->y + 0.5f;
 
-        int fx = (int)((texture->matrix.c * cy + texture->matrix.a * cx + texture->matrix.e) * FIXED_SCALE);
-        int fy = (int)((texture->matrix.d * cy + texture->matrix.b * cx + texture->matrix.f) * FIXED_SCALE);
+        int64_t fx = plutovg_f2l((texture->matrix.c * cy + texture->matrix.a * cx + texture->matrix.e) * FIXED_SCALE);
+        int64_t fy = plutovg_f2l((texture->matrix.d * cy + texture->matrix.b * cx + texture->matrix.f) * FIXED_SCALE);
 
         fx -= HALF_POINT;
         fy -= HALF_POINT;

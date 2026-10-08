@@ -531,7 +531,12 @@ typedef struct {
     plutovg_point_t current_point;
     plutovg_path_traverse_func_t traverse_func;
     void* closure;
+    long budget;
 } dasher_t;
+
+/* The most dash segments one path makes; past it, and wherever a dash is
+ * too small to advance in single precision, the rest is drawn solid. */
+#define PLUTOVG_MAX_DASH_SEGMENTS 1000000L
 
 static void dash_traverse_func(void* closure, plutovg_path_command_t command, const plutovg_point_t* points, int npoints)
 {
@@ -554,7 +559,15 @@ static void dash_traverse_func(void* closure, plutovg_path_command_t command, co
     float dist0 = sqrtf(dx*dx + dy*dy);
     float dist1 = 0.f;
     while(dist0 - dist1 > dasher->dashes[dasher->index % dasher->ndashes] - dasher->phase) {
-        dist1 += dasher->dashes[dasher->index % dasher->ndashes] - dasher->phase;
+        float next = dist1 + dasher->dashes[dasher->index % dasher->ndashes] - dasher->phase;
+        if(dasher->budget <= 0 || !(next > dist1)) {
+            dasher->budget = 0;
+            dasher->toggle = true;
+            break;
+        }
+
+        dasher->budget--;
+        dist1 = next;
         float a = dist1 / dist0;
         plutovg_point_t p = { p0.x + a * dx, p0.y + a * dy };
         if(dasher->toggle) {
@@ -565,7 +578,7 @@ static void dash_traverse_func(void* closure, plutovg_path_command_t command, co
 
         dasher->phase = 0.f;
         dasher->toggle = !dasher->toggle;
-        dasher->index++;
+        dasher->index = (dasher->index + 1) % dasher->ndashes;
     }
 
     if(dasher->toggle) {
@@ -608,6 +621,7 @@ void plutovg_path_traverse_dashed(const plutovg_path_t* path, float offset, cons
     dasher.current_point = PLUTOVG_EMPTY_POINT;
     dasher.traverse_func = traverse_func;
     dasher.closure = closure;
+    dasher.budget = PLUTOVG_MAX_DASH_SEGMENTS;
     plutovg_path_traverse_flatten(path, dash_traverse_func, &dasher);
 }
 
