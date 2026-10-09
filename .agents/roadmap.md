@@ -2,7 +2,7 @@
 
 Companion to [design.md](design.md). Section references (§) point there.
 
-**Status:** adopted 2026-10-08 from [RFC 0007](https://github.com/pedrobtz/packages/blob/main/rfcs/0007-zusvg-svg-rasteriser.md). Nothing below is implemented; the repository is the `usethis` skeleton (created 2026-10-08 with `dotfiles/create-pkg.sh -c`) plus these documents.
+**Status:** adopted 2026-10-08 from [RFC 0007](https://github.com/pedrobtz/packages/blob/main/rfcs/0007-zusvg-svg-rasteriser.md). Stages 0–6 and Stage 7's preparation were implemented and merged on 2026-10-08 (#11, #15–#21); the CRAN submission waits for zufast.
 
 ## Sequencing principles
 
@@ -137,7 +137,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 1 — `svg_load()`, `svg_read()`, `svg_size()`, errors, limits, pre-scan · M
 
-**Status:** in review. The valgrind leg found R reading uninitialised memory in `gzcon(rawConnection())`, so gzip bytes now go through a temporary file and `gzfile()`.
+**Status:** done 2026-10-08 (#15).
 
 **Do**
 
@@ -166,7 +166,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 2 — `svg_render()` with `as = "native"`; shape tests; fixtures · M
 
-**Status:** in review.
+**Status:** done 2026-10-08 (#16).
 
 **Do**
 
@@ -194,7 +194,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 3 — `"array"`, `"raw"`, `id`, `svg_extents()`, colours, palette · M
 
-**Status:** in review.
+**Status:** done 2026-10-08 (#17).
 
 **Do**
 
@@ -223,7 +223,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 4 — `svg_png()`, `svg_jpeg()`, `svg_elements()`, text warning · S
 
-**Status:** in review.
+**Status:** done 2026-10-08 (#18).
 
 **Do**
 
@@ -251,7 +251,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 5 — Fuzz target, mutation check, hardening CI · M
 
-**Status:** in review.
+**Status:** done 2026-10-08 (#19).
 
 **Do**
 
@@ -284,7 +284,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 6 — zukomp compression; conformance and benchmarks · M
 
-**Status:** in review.
+**Status:** done 2026-10-08 (#20).
 
 **Do**
 
@@ -313,7 +313,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 7 — pkgdown site, vignette, CRAN · S
 
-**Status:** preparation in review; submission blocked until zufast is on CRAN (2026-10-08: zufast is untagged and unsubmitted).
+**Status:** preparation done 2026-10-08 (#21); submission blocked until zufast is on CRAN.
 
 **Do**
 
