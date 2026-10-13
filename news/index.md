@@ -11,7 +11,10 @@ First release.
   [`svg_validate()`](https://pedrobtz.github.io/zusvg/reference/svg_validate.md)
   load SVG from a string, raw vector, connection or file
   (gzip-compressed included) under limits on size, element count,
-  nesting and embedded images.
+  nesting and embedded images. A URL or file that
+  [`svg_read()`](https://pedrobtz.github.io/zusvg/reference/svg_read.md)
+  cannot open is a `zusvg_io_error` naming the cause
+  (`HTTP status was '404 Not Found'`), with no stray warning.
 - [`svg_render()`](https://pedrobtz.github.io/zusvg/reference/svg_render.md)
   draws a document, or one element by `id`, to a `nativeRaster`, an RGBA
   array or raw RGBA bytes, with `currentColor` and CSS

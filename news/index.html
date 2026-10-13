@@ -37,7 +37,7 @@
 <h2 class="pkg-version" data-toc-text="0.1.0" id="zusvg-010">zusvg 0.1.0<a class="anchor" aria-label="anchor" href="#zusvg-010"></a></h2>
 <p>First release.</p>
 <ul><li>
-<code><a href="../reference/svg_load.html">svg_load()</a></code>, <code><a href="../reference/svg_read.html">svg_read()</a></code>, <code><a href="../reference/svg_size.html">svg_size()</a></code> and <code><a href="../reference/svg_validate.html">svg_validate()</a></code> load SVG from a string, raw vector, connection or file (gzip-compressed included) under limits on size, element count, nesting and embedded images.</li>
+<code><a href="../reference/svg_load.html">svg_load()</a></code>, <code><a href="../reference/svg_read.html">svg_read()</a></code>, <code><a href="../reference/svg_size.html">svg_size()</a></code> and <code><a href="../reference/svg_validate.html">svg_validate()</a></code> load SVG from a string, raw vector, connection or file (gzip-compressed included) under limits on size, element count, nesting and embedded images. A URL or file that <code><a href="../reference/svg_read.html">svg_read()</a></code> cannot open is a <code>zusvg_io_error</code> naming the cause (<code>HTTP status was '404 Not Found'</code>), with no stray warning.</li>
 <li>
 <code><a href="../reference/svg_render.html">svg_render()</a></code> draws a document, or one element by <code>id</code>, to a <code>nativeRaster</code>, an RGBA array or raw RGBA bytes, with <code>currentColor</code> and CSS <code><a href="https://rdrr.io/r/stats/cor.html" class="external-link">var()</a></code> colours supplied from R; <code><a href="../reference/svg_extents.html">svg_extents()</a></code> measures.</li>
 <li>

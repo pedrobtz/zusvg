@@ -40,7 +40,7 @@ class below inherits from `zusvg_error`.
 
 - `zusvg_io_error`:
 
-  A file or connection could not be read or written.
+  A file, URL or connection could not be opened, read or written.
 
 A `zusvg_parse_error`, `zusvg_encoding_error` or `zusvg_limit_error`
 raised while loading carries `offset`, the 0-based byte offset of the
