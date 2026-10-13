@@ -37,6 +37,18 @@ test_that("a connection that cannot be read is an I/O error", {
   expect_zusvg_error(svg_read(con), "zusvg_io_error")
 })
 
+test_that("a URL that cannot be opened is an I/O error, without a warning", {
+  # A file:// URL is opened as a URL connection and fails, as an HTTP 404
+  # does, without needing the network.
+  missing <- paste0("file://", file.path(tempdir(), "no-such-file.svg"))
+  before <- nrow(showConnections(all = TRUE))
+  expect_no_warning(
+    err <- tryCatch(svg_read(missing), error = identity)
+  )
+  expect_s3_class(err, "zusvg_io_error")
+  expect_identical(nrow(showConnections(all = TRUE)), before)
+})
+
 test_that("an .svgz file is decompressed", {
   path <- withr::local_tempfile(fileext = ".svgz")
   con <- gzfile(path, "wb")

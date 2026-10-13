@@ -247,7 +247,7 @@ gzip needs no dependency (*decided at Stage 1*, D16). R's `file()` decompresses 
 | `zusvg_missing_element` | `id` is not in the document |
 | `zusvg_render_error` | plutosvg's render returned `false` |
 | `zusvg_memory_error` | a surface or buffer could not be allocated |
-| `zusvg_io_error` | a file or connection could not be read or written |
+| `zusvg_io_error` | a file, URL or connection could not be opened, read or written |
 
 Warnings: `zusvg_text_skipped` and `zusvg_clip_skipped` (§6.4). Every class inherits `zusvg_error` (or `zusvg_warning`); the parse error carries `offset` when the pre-scan found the fault and `NA` when the loader did, since the loader gives no position. Statuses come back from C by enumerator name and R raises (`zucbor`'s convention). Tests assert on class.
 
