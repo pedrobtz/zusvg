@@ -21,8 +21,8 @@
 #'   \item{`zusvg_missing_element`}{An `id` is not in the document.}
 #'   \item{`zusvg_render_error`}{plutosvg could not render the document.}
 #'   \item{`zusvg_memory_error`}{An allocation failed.}
-#'   \item{`zusvg_io_error`}{A file or connection could not be read or
-#'     written.}
+#'   \item{`zusvg_io_error`}{A file, URL or connection could not be opened,
+#'     read or written.}
 #' }
 #'
 #' A `zusvg_parse_error`, `zusvg_encoding_error` or `zusvg_limit_error`

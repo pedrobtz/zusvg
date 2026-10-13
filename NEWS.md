@@ -5,6 +5,8 @@ First release.
 * `svg_load()`, `svg_read()`, `svg_size()` and `svg_validate()` load SVG from
   a string, raw vector, connection or file (gzip-compressed included) under
   limits on size, element count, nesting and embedded images.
+  A URL or file that `svg_read()` cannot open is a `zusvg_io_error` naming
+  the cause (`HTTP status was '404 Not Found'`), with no stray warning.
 * `svg_render()` draws a document, or one element by `id`, to a
   `nativeRaster`, an RGBA array or raw RGBA bytes, with `currentColor` and
   CSS `var()` colours supplied from R; `svg_extents()` measures.

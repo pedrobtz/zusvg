@@ -23,8 +23,8 @@ argument's name, such as \code{"max_size"}, and \code{limit_value}.}
 \item{\code{zusvg_missing_element}}{An \code{id} is not in the document.}
 \item{\code{zusvg_render_error}}{plutosvg could not render the document.}
 \item{\code{zusvg_memory_error}}{An allocation failed.}
-\item{\code{zusvg_io_error}}{A file or connection could not be read or
-written.}
+\item{\code{zusvg_io_error}}{A file, URL or connection could not be opened,
+read or written.}
 }
 
 A \code{zusvg_parse_error}, \code{zusvg_encoding_error} or \code{zusvg_limit_error}
