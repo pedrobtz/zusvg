@@ -113,14 +113,6 @@ test_that("input that is not UTF-8 is an encoding error", {
   expect_zusvg_error(svg_load(nul), "zusvg_encoding_error", offset = 10)
 })
 
-gzip_bytes <- function(txt) {
-  path <- withr::local_tempfile(.local_envir = parent.frame())
-  con <- gzfile(path, "wb")
-  writeLines(txt, con)
-  close(con)
-  readBin(path, "raw", file.size(path))
-}
-
 test_that("gzip-compressed input is decompressed", {
   gz <- gzip_bytes(svg_text('<rect id="z"/>'))
   expect_identical(gz[1:2], as.raw(c(0x1f, 0x8b)))

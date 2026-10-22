@@ -1,10 +1,3 @@
-two_px <- function() {
-  svg_text(paste0(
-    '<rect width="1" height="2" fill="#ff0000"/>',
-    '<rect x="1" width="1" height="2" fill="#0000ff" fill-opacity="0.5"/>'
-  ), 'width="2" height="2"')
-}
-
 test_that('as = "array" is height x width x 4 in [0, 1], non-premultiplied', {
   a <- svg_render(two_px(), as = "array")
   expect_type(a, "double")
@@ -47,14 +40,6 @@ test_that("png::writePNG() takes the native and array forms", {
 test_that("as must be one of the three forms", {
   expect_zusvg_error(svg_render(svg_text(), as = "png"), "zusvg_invalid_argument", arg = "as")
 })
-
-sheet <- function() {
-  svg_text(paste0(
-    '<circle id="a" cx="10" cy="10" r="8" fill="#f00"/>',
-    '<rect id="b" x="24" y="4" width="12" height="12" fill="#00f"/>',
-    '<g id="empty"/>'
-  ), 'width="40" height="20"')
-}
 
 test_that("svg_extents() measures the document and its elements", {
   expect_identical(svg_extents(sheet(), id = "b"),

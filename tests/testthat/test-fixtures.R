@@ -1,9 +1,8 @@
-hashes <- read.delim(test_path("fixtures", "hashes.tsv"), colClasses = "character")
-
 test_that("every fixture renders to its pinned hash", {
   # Exact hashes are CI's claim, not CRAN's (design D14): a CRAN machine's
   # compiler may contract floating point differently (design §8).
   skip_on_cran()
+  hashes <- fixture_hashes()
   for (i in seq_len(nrow(hashes))) {
     h <- hashes[i, ]
     r <- svg_render(svg_read(fixture(h$file)), width = as.numeric(h$width), quiet = TRUE)
