@@ -16,6 +16,15 @@ diagrams and badges, which mostly need text, use
 
 ## Installation
 
+Install zusvg from CRAN with:
+
+``` r
+
+install.packages("zusvg")
+```
+
+or the development version from GitHub with:
+
 ``` r
 
 # install.packages("pak")

@@ -102,10 +102,11 @@ fallback, as plutosvg does.</p></dd>
 <dd><p>The form of the result:</p><ul><li><p><code>"native"</code>, a <code>nativeRaster</code> that <code><a href="https://rdrr.io/r/grid/grid.raster.html" class="external-link">grid::rasterGrob()</a></code> and
 <code><a href="https://rdrr.io/r/graphics/rasterImage.html" class="external-link">graphics::rasterImage()</a></code> draw without conversion;</p></li>
 <li><p><code>"array"</code>, a <code>height x width x 4</code> double array in <code>[0, 1]</code>, the shape
-rsvg's <code>rsvg()</code> returns, which <code><a href="https://rdrr.io/r/grDevices/as.raster.html" class="external-link">as.raster()</a></code> and <code><a href="https://rdrr.io/pkg/png/man/writePNG.html" class="external-link">png::writePNG()</a></code>
-take;</p></li>
-<li><p><code>"raw"</code>, RGBA bytes with <code>dim = c(4, width, height)</code>, the shape
-rsvg's <code>rsvg_raw()</code> returns and magick's <code>image_read()</code> takes.</p></li>
+that <code>rsvg()</code> in the rsvg package returns, which <code><a href="https://rdrr.io/r/grDevices/as.raster.html" class="external-link">as.raster()</a></code> and
+<code><a href="https://rdrr.io/pkg/png/man/writePNG.html" class="external-link">png::writePNG()</a></code> take;</p></li>
+<li><p><code>"raw"</code>, RGBA bytes with <code>dim = c(4, width, height)</code>, the shape that
+<code>rsvg_raw()</code> in the rsvg package returns and <code>image_read()</code> in the
+magick package takes.</p></li>
 </ul></dd>
 
 

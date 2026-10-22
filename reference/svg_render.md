@@ -75,12 +75,13 @@ svg_render(
     draw without conversion;
 
   - `"array"`, a `height x width x 4` double array in `[0, 1]`, the
-    shape rsvg's `rsvg()` returns, which
+    shape that `rsvg()` in the rsvg package returns, which
     [`as.raster()`](https://rdrr.io/r/grDevices/as.raster.html) and
     [`png::writePNG()`](https://rdrr.io/pkg/png/man/writePNG.html) take;
 
-  - `"raw"`, RGBA bytes with `dim = c(4, width, height)`, the shape
-    rsvg's `rsvg_raw()` returns and magick's `image_read()` takes.
+  - `"raw"`, RGBA bytes with `dim = c(4, width, height)`, the shape that
+    `rsvg_raw()` in the rsvg package returns and `image_read()` in the
+    magick package takes.
 
 - max_pixels:
 
