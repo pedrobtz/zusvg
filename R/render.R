@@ -25,10 +25,11 @@
 #'   * `"native"`, a `nativeRaster` that [grid::rasterGrob()] and
 #'     [graphics::rasterImage()] draw without conversion;
 #'   * `"array"`, a `height x width x 4` double array in `[0, 1]`, the shape
-#'     `rsvg::rsvg()` returns, which [as.raster()] and [png::writePNG()]
-#'     take;
-#'   * `"raw"`, RGBA bytes with `dim = c(4, width, height)`, the shape
-#'     `rsvg::rsvg_raw()` returns and `magick::image_read()` takes.
+#'     that `rsvg()` in the rsvg package returns, which [as.raster()] and
+#'     [png::writePNG()] take;
+#'   * `"raw"`, RGBA bytes with `dim = c(4, width, height)`, the shape that
+#'     `rsvg_raw()` in the rsvg package returns and `image_read()` in the
+#'     magick package takes.
 #' @param max_pixels The most pixels the surface may have, at most
 #'   `2^29 - 1`, or `Inf` for that.
 #' @param quiet If `TRUE`, no warning is given for content that will not
