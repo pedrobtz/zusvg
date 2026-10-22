@@ -25,6 +25,10 @@ jobs:
       # The default runners plus Windows on R-devel: the containers job is
       # R-devel on Linux, and no other leg is the combination CRAN's incoming
       # pretest runs (r-devel-windows-x86_64).
+      # CRAN's NOSUGGESTS and NOLD flavors, both off by default; full
+      # profile only.
+      nosuggests: true
+      nold: true
       runners: >-
         [{"os": "macos-latest", "r": "release"},
          {"os": "windows-latest", "r": "release"},
