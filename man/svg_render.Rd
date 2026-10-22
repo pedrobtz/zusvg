@@ -46,10 +46,11 @@ fallback, as plutosvg does.}
 \item \code{"native"}, a \code{nativeRaster} that \code{\link[grid:rasterGrob]{grid::rasterGrob()}} and
 \code{\link[graphics:rasterImage]{graphics::rasterImage()}} draw without conversion;
 \item \code{"array"}, a \verb{height x width x 4} double array in \verb{[0, 1]}, the shape
-rsvg's \code{rsvg()} returns, which \code{\link[=as.raster]{as.raster()}} and \code{\link[png:writePNG]{png::writePNG()}}
-take;
-\item \code{"raw"}, RGBA bytes with \code{dim = c(4, width, height)}, the shape
-rsvg's \code{rsvg_raw()} returns and magick's \code{image_read()} takes.
+that \code{rsvg()} in the rsvg package returns, which \code{\link[=as.raster]{as.raster()}} and
+\code{\link[png:writePNG]{png::writePNG()}} take;
+\item \code{"raw"}, RGBA bytes with \code{dim = c(4, width, height)}, the shape that
+\code{rsvg_raw()} in the rsvg package returns and \code{image_read()} in the
+magick package takes.
 }}
 
 \item{max_pixels}{The most pixels the surface may have, at most

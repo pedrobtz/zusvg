@@ -1,10 +1,3 @@
-icon <- function() {
-  svg_text(paste0(
-    '<rect width="5" height="10" fill="#ff0000"/>',
-    '<rect x="5" width="5" height="10" fill="#0000ff" fill-opacity="0.5"/>'
-  ))
-}
-
 test_that("svg_png() returns PNG bytes holding the rendered pixels", {
   skip_if_not_installed("png")
   bytes <- svg_png(icon())

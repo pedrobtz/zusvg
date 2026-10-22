@@ -13,7 +13,7 @@ It is a member of the `zu*` family (sibling checkouts in `../`), the first whose
 
 ## Current state
 
-**2026-10-08: 0.1.0 is ready except for one blocker.** Stages 0–6 are merged (#11, #15–#20), and Stage 7's preparation is too (#21): vignette, README, pkgdown, `cran-comments.md`, `Version: 0.1.0`. The blocker: zufast must be on CRAN before `Remotes:` can be removed and the package submitted (#10 stays open for that). Sixteen patches are applied to the vendored libraries (`tools/patches/`). Design §16 records the benchmarks, and the roadmap's Stage 7 table records the §19 acceptance criteria. Tracking: parent #2.
+**2026-10-22: 0.1.0 is ready to submit once CI is green.** Stages 0–6 are merged (#11, #15–#20), and Stage 7's preparation is too (#21): vignette, README, pkgdown, `cran-comments.md`, `Version: 0.1.0`. zufast 0.1.0 reached CRAN on 2026-10-21 and `Remotes:` is gone. The fuzz timeout (#27) is fixed by patch 0017 (#29). Before submitting: a full green CI run on `main`. #10 stays open until CRAN accepts. Seventeen patches are applied to the vendored libraries (`tools/patches/`). Design §16 records the benchmarks, and the roadmap's Stage 7 table records the §19 acceptance criteria. Tracking: parent #2.
 
 Update this paragraph at the end of every stage.
 
@@ -32,7 +32,7 @@ Progress toward the next version is tracked as GitHub sub-issues, so the parent 
 
 The package develops at `0.0.0.9000` and targets `0.1.0` for its first CRAN release. Set `Version: 0.1.0` and the matching `NEWS.md` heading when the package enters `Pre-flight` (Stage 7). Bump to `0.1.0.9000` only after CRAN accepts it.
 
-Until the first release the R API may change freely. zusvg depends on a sibling before CRAN does: `LinkingTo: zufast (>= 0.1.0)` from `Remotes: pedrobtz/zufast@main` during development. **zufast must be on CRAN before zusvg is submitted** (R10.5); on 2026-10-08 it is untagged and unsubmitted. `Remotes:` goes at Stage 7. `zukomp` (submitted 2026-10-06) is added to `LinkingTo` and `Imports` only when it is on CRAN. No package depends on zusvg. The name itself is open until the first tag (design §18 Q7).
+Until the first release the R API may change freely. zusvg links to a sibling: `LinkingTo: zufast (>= 0.1.0)`, on CRAN since 2026-10-21, so there is no `Remotes:`. `zukomp` (on CRAN since 2026-10-16) joins `LinkingTo` and `Imports` after 0.1.0, for PNG compression. No package depends on zusvg. The name itself is open until the first tag (design §18 Q7).
 
 ## Commands
 
@@ -48,7 +48,7 @@ _R_CHECK_SYSTEM_CLOCK_=0 Rscript -e 'devtools::check(cran = TRUE)'
 air format .                                     # format R sources
 ```
 
-zufast is not on CRAN: install it from `../zufast` or `pak::pak("pedrobtz/zufast")`. roxygen2 must be 8.1.0 or newer.
+zufast is on CRAN: `install.packages("zufast")`. roxygen2 must be 8.1.0 or newer.
 
 Gate scripts, each arriving at the roadmap stage named:
 

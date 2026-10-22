@@ -2,7 +2,7 @@
 
 Companion to [design.md](design.md). Section references (§) point there.
 
-**Status:** adopted 2026-10-08 from [RFC 0007](https://github.com/pedrobtz/packages/blob/main/rfcs/0007-zusvg-svg-rasteriser.md). Stages 0–6 and Stage 7's preparation were implemented and merged on 2026-10-08 (#11, #15–#21); the CRAN submission waits for zufast.
+**Status:** adopted 2026-10-08 from [RFC 0007](https://github.com/pedrobtz/packages/blob/main/rfcs/0007-zusvg-svg-rasteriser.md). Stages 0–6 and Stage 7's preparation were implemented and merged on 2026-10-08 (#11, #15–#21); zufast reached CRAN on 2026-10-21, so the submission is unblocked.
 
 ## Sequencing principles
 
@@ -22,7 +22,7 @@ Sizes are relative: **S** ≈ a sitting, **M** ≈ a few, **L** ≈ the stage is
 
 ## The release order, and what it costs
 
-`LinkingTo: zufast (>= 0.1.0)` is unconditional (the pre-scan's UTF-8 check), so **zufast must be on CRAN before zusvg can be submitted** (alignment R10.5, release order). On 2026-10-08 zufast's `DESCRIPTION` says 0.1.0, but it has no tag, is not submitted, and is not on CRAN. `Remotes: pedrobtz/zufast@main` carries development (R10.2), and Stage 7 removes it. `zukomp` was submitted on 2026-10-06 and is not yet accepted. It enters `LinkingTo` and `Imports` at Stage 6, for PNG compression only, if it is on CRAN by then; otherwise the better PNG compression waits for 0.1.1, and Stage 6 says so in `zusvg_info()`. `.svgz` needs no zukomp (design D16).
+`LinkingTo: zufast (>= 0.1.0)` is unconditional (the pre-scan's UTF-8 check), so **zufast must be on CRAN before zusvg can be submitted** (alignment R10.5, release order). On 2026-10-08 zufast's `DESCRIPTION` said 0.1.0, but it had no tag and was not on CRAN; zufast 0.1.0 was published on CRAN on 2026-10-21. `Remotes: pedrobtz/zufast@main` carries development (R10.2), and Stage 7 removes it. `zukomp` was submitted on 2026-10-06 and is not yet accepted. It enters `LinkingTo` and `Imports` at Stage 6, for PNG compression only, if it is on CRAN by then; otherwise the better PNG compression waits for 0.1.1, and Stage 6 says so in `zusvg_info()`. `.svgz` needs no zukomp (design D16).
 
 Nothing waits on zusvg.
 
@@ -313,7 +313,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 7 — pkgdown site, vignette, CRAN · S
 
-**Status:** preparation done 2026-10-08 (#21); submission blocked until zufast is on CRAN.
+**Status:** preparation done 2026-10-08 (#21). zufast 0.1.0 reached CRAN on 2026-10-21, and on 2026-10-22 `Remotes:` was removed and Windows R-devel added to the check runners; the fuzz timeout (#27) was fixed by patch 0017 (#29). The submission waits for a full green CI run on `main`.
 
 **Do**
 
@@ -333,9 +333,9 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 - `Version: 0.1.0` and the NEWS heading are set. The `review-cran-submission` review was run: an `--as-cran` check of the built tarball shows only the zufast blocker and the new-submission notice, the URLs check clean, and the spelling is clean.
 
-**Left for the submission** (each needs zufast on CRAN):
+**Left for the submission:**
 
-- remove `Remotes:` and rebuild against zufast's CRAN tarball;
+- ~~remove `Remotes:` and rebuild against zufast's CRAN tarball~~ (2026-10-22: `--as-cran` against zufast 0.1.0 from CRAN shows only the new-submission notice);
 - run `--as-cran --run-donttest`, then the `cran-extrachecks` and `review-cran-submission` skills;
 - submit, then tag.
 
