@@ -15,10 +15,11 @@ fuzzing, and remove what R CMD check reports (compiler warnings, a
 
 The package's GitHub Actions run `R CMD check --as-cran` on:
 
-* ubuntu-latest: R release and oldrel-1; GCC 16 and clang toolchains
+* ubuntu-latest: R release and oldrel-1
 * macos-latest (arm64): R release
-* windows-latest: R release
-* the r-hub `clang23` container (R-devel, C23)
+* windows-latest: R release and R-devel
+* R-devel containers: `clang23` (C23), `ubuntu-clang` and `ubuntu-gcc16`
+* `nosuggests` (no suggested packages) and `nold` (no long doubles)
 
 and, on every change, UBSan, ASan, valgrind, LTO, gctorture and rchk, a
 libFuzzer run over the parser and renderer, and a render-hash comparison

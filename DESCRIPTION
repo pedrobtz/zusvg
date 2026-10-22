@@ -35,8 +35,6 @@ Suggests:
     withr
 LinkingTo:
     zufast (>= 0.1.0)
-Remotes:
-    pedrobtz/zufast@main
 Config/roxygen2/version: 8.1.0
 VignetteBuilder: knitr
 Config/testthat/edition: 3
