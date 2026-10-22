@@ -6,7 +6,10 @@
 # * https://r-pkgs.org/testing-design.html#sec-tests-files-overview
 # * https://testthat.r-lib.org/articles/special-files.html
 
-library(testthat)
-library(zusvg)
+# testthat is in Suggests: CRAN's NOSUGGESTS check runs without it.
+if (requireNamespace("testthat", quietly = TRUE)) {
+  library(testthat)
+  library(zusvg)
 
-test_check("zusvg")
+  test_check("zusvg")
+}
