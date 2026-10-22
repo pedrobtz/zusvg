@@ -32,7 +32,8 @@ test_that("zusvg_info() lists every local patch, in order", {
       "0013-stroker-empty-border",
       "0014-stbiw-jpg-unsigned-bits",
       "0015-use-ancestor-cycle",
-      "0016-blend-defined-casts"
+      "0016-blend-defined-casts",
+      "0017-render-dash-budget"
     )
   )
 })

@@ -162,7 +162,17 @@ struct plutovg_canvas {
     plutovg_rect_t clip_rect;
     plutovg_span_buffer_t clip_spans;
     plutovg_span_buffer_t fill_spans;
+    long dash_budget;
 };
+
+/* The most segments dashing makes: per call of the public path API, and
+ * per canvas in rendering, so that every stroke of a render shares one
+ * budget. Flattened curve segments count as well as dashes. Past it, and
+ * wherever a dash is too small to advance in single precision, the rest is
+ * drawn solid. */
+#define PLUTOVG_MAX_DASH_SEGMENTS 1000000L
+
+plutovg_path_t* plutovg_path_clone_dashed_budget(const plutovg_path_t* path, float offset, const float* dashes, int ndashes, long* budget);
 
 void plutovg_span_buffer_init(plutovg_span_buffer_t* span_buffer);
 void plutovg_span_buffer_init_rect(plutovg_span_buffer_t* span_buffer, int x, int y, int width, int height);
@@ -173,7 +183,7 @@ bool plutovg_span_buffer_contains(const plutovg_span_buffer_t* span_buffer, floa
 void plutovg_span_buffer_extents(plutovg_span_buffer_t* span_buffer, plutovg_rect_t* extents);
 void plutovg_span_buffer_intersect(plutovg_span_buffer_t* span_buffer, const plutovg_span_buffer_t* a, const plutovg_span_buffer_t* b);
 
-void plutovg_rasterize(plutovg_span_buffer_t* span_buffer, const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_rect_t* clip_rect, const plutovg_stroke_data_t* stroke_data, plutovg_fill_rule_t winding);
+void plutovg_rasterize(plutovg_span_buffer_t* span_buffer, const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_rect_t* clip_rect, const plutovg_stroke_data_t* stroke_data, plutovg_fill_rule_t winding, long* dash_budget);
 void plutovg_blend(plutovg_canvas_t* canvas, const plutovg_span_buffer_t* span_buffer);
 void plutovg_memfill32(unsigned int* dest, int length, unsigned int value);
 

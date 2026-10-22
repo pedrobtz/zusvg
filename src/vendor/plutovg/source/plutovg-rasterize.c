@@ -267,12 +267,12 @@ static void ft_outline_end(PVG_FT_Outline* ft)
     }
 }
 
-static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data);
+static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data, long* dash_budget);
 
-static PVG_FT_Outline* ft_outline_convert(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data)
+static PVG_FT_Outline* ft_outline_convert(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data, long* dash_budget)
 {
     if(stroke_data) {
-        return ft_outline_convert_stroke(path, matrix, stroke_data);
+        return ft_outline_convert_stroke(path, matrix, stroke_data, dash_budget);
     }
 
     plutovg_path_iterator_t it;
@@ -304,17 +304,22 @@ static PVG_FT_Outline* ft_outline_convert(const plutovg_path_t* path, const plut
     return outline;
 }
 
-static PVG_FT_Outline* ft_outline_convert_dash(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_dash_t* stroke_dash)
+static PVG_FT_Outline* ft_outline_convert_dash(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_dash_t* stroke_dash, long* dash_budget)
 {
-    if(stroke_dash->array.size == 0)
-        return ft_outline_convert(path, matrix, NULL);
-    plutovg_path_t* dashed = plutovg_path_clone_dashed(path, stroke_dash->offset, stroke_dash->array.data, stroke_dash->array.size);
-    PVG_FT_Outline* outline = ft_outline_convert(dashed, matrix, NULL);
+    if(stroke_dash->array.size == 0 || (dash_budget && *dash_budget <= 0))
+        return ft_outline_convert(path, matrix, NULL, NULL);
+    plutovg_path_t* dashed;
+    if(dash_budget) {
+        dashed = plutovg_path_clone_dashed_budget(path, stroke_dash->offset, stroke_dash->array.data, stroke_dash->array.size, dash_budget);
+    } else {
+        dashed = plutovg_path_clone_dashed(path, stroke_dash->offset, stroke_dash->array.data, stroke_dash->array.size);
+    }
+    PVG_FT_Outline* outline = ft_outline_convert(dashed, matrix, NULL, NULL);
     plutovg_path_destroy(dashed);
     return outline;
 }
 
-static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data)
+static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data, long* dash_budget)
 {
     double scale_x = sqrt(matrix->a * matrix->a + matrix->b * matrix->b);
     double scale_y = sqrt(matrix->c * matrix->c + matrix->d * matrix->d);
@@ -358,7 +363,7 @@ static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, con
     PVG_FT_Stroker_New(&stroker);
     PVG_FT_Stroker_Set(stroker, ftWidth, ftCap, ftJoin, ftMiterLimit);
 
-    PVG_FT_Outline* outline = ft_outline_convert_dash(path, matrix, &stroke_data->dash);
+    PVG_FT_Outline* outline = ft_outline_convert_dash(path, matrix, &stroke_data->dash, dash_budget);
     PVG_FT_Stroker_ParseOutline(stroker, outline);
 
     PVG_FT_UInt points;
@@ -379,9 +384,9 @@ static void spans_generation_callback(int count, const PVG_FT_Span* spans, void*
     plutovg_array_append_data(span_buffer->spans, spans, count);
 }
 
-void plutovg_rasterize(plutovg_span_buffer_t* span_buffer, const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_rect_t* clip_rect, const plutovg_stroke_data_t* stroke_data, plutovg_fill_rule_t winding)
+void plutovg_rasterize(plutovg_span_buffer_t* span_buffer, const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_rect_t* clip_rect, const plutovg_stroke_data_t* stroke_data, plutovg_fill_rule_t winding, long* dash_budget)
 {
-    PVG_FT_Outline* outline = ft_outline_convert(path, matrix, stroke_data);
+    PVG_FT_Outline* outline = ft_outline_convert(path, matrix, stroke_data, dash_budget);
     if(stroke_data) {
         outline->flags = PVG_FT_OUTLINE_NONE;
     } else {
