@@ -19,7 +19,7 @@ plutovg
                  (src/vendor/plutovg/source/FTL.TXT); the stb headers
                  public domain or MIT, at the end of each file
 
-  Imported:      2026-10-08
+  Imported:      2026-10-22
   Local patches: applied in this order, from tools/patches/
                  0001-use-depth.patch
                  0002-loader-alloc-checks.patch
@@ -37,6 +37,7 @@ plutovg
                  0014-stbiw-jpg-unsigned-bits.patch
                  0015-use-ancestor-cycle.patch
                  0016-blend-defined-casts.patch
+                 0017-render-dash-budget.patch
 
 src/vendor/plutosvg/ and src/vendor/plutovg/ are the files listed in
 tools/plutosvg-files.txt and tools/plutovg-files.txt, copied from the

@@ -461,7 +461,7 @@ static inline void split_bezier(const bezier_t* b, bezier_t* first, bezier_t* se
     first->y4 = second->y1 = (first->y3 + second->y2) * 0.5f;
 }
 
-void plutovg_path_traverse_flatten(const plutovg_path_t* path, plutovg_path_traverse_func_t traverse_func, void* closure)
+static void traverse_flatten(const plutovg_path_t* path, plutovg_path_traverse_func_t traverse_func, void* closure, long* budget)
 {
     if(path->num_curves == 0) {
         plutovg_path_traverse(path, traverse_func, closure);
@@ -507,9 +507,11 @@ void plutovg_path_traverse_flatten(const plutovg_path_t* path, plutovg_path_trav
                     l = 1.f;
                 }
 
-                if(d < threshold*l || b == beziers + 31) {
+                if(d < threshold*l || b == beziers + 31 || (budget && *budget <= 0)) {
                     plutovg_point_t p = { b->x4, b->y4 };
                     traverse_func(closure, PLUTOVG_PATH_COMMAND_LINE_TO, &p, 1);
+                    if(budget && *budget > 0)
+                        --*budget;
                     --b;
                 } else {
                     split_bezier(b, b + 1, b);
@@ -523,6 +525,11 @@ void plutovg_path_traverse_flatten(const plutovg_path_t* path, plutovg_path_trav
     }
 }
 
+void plutovg_path_traverse_flatten(const plutovg_path_t* path, plutovg_path_traverse_func_t traverse_func, void* closure)
+{
+    traverse_flatten(path, traverse_func, closure, NULL);
+}
+
 typedef struct {
     const float* dashes; int ndashes;
     float start_phase; float phase;
@@ -531,12 +538,8 @@ typedef struct {
     plutovg_point_t current_point;
     plutovg_path_traverse_func_t traverse_func;
     void* closure;
-    long budget;
+    long* budget;
 } dasher_t;
-
-/* The most dash segments one path makes; past it, and wherever a dash is
- * too small to advance in single precision, the rest is drawn solid. */
-#define PLUTOVG_MAX_DASH_SEGMENTS 1000000L
 
 static void dash_traverse_func(void* closure, plutovg_path_command_t command, const plutovg_point_t* points, int npoints)
 {
@@ -560,13 +563,13 @@ static void dash_traverse_func(void* closure, plutovg_path_command_t command, co
     float dist1 = 0.f;
     while(dist0 - dist1 > dasher->dashes[dasher->index % dasher->ndashes] - dasher->phase) {
         float next = dist1 + dasher->dashes[dasher->index % dasher->ndashes] - dasher->phase;
-        if(dasher->budget <= 0 || !(next > dist1)) {
-            dasher->budget = 0;
+        if(*dasher->budget <= 0 || !(next > dist1)) {
+            *dasher->budget = 0;
             dasher->toggle = true;
             break;
         }
 
-        dasher->budget--;
+        --*dasher->budget;
         dist1 = next;
         float a = dist1 / dist0;
         plutovg_point_t p = { p0.x + a * dx, p0.y + a * dy };
@@ -589,7 +592,7 @@ static void dash_traverse_func(void* closure, plutovg_path_command_t command, co
     dasher->current_point = p1;
 }
 
-void plutovg_path_traverse_dashed(const plutovg_path_t* path, float offset, const float* dashes, int ndashes, plutovg_path_traverse_func_t traverse_func, void* closure)
+static void traverse_dashed(const plutovg_path_t* path, float offset, const float* dashes, int ndashes, plutovg_path_traverse_func_t traverse_func, void* closure, long* budget)
 {
     float dash_sum = 0.f;
     for(int i = 0; i < ndashes; ++i)
@@ -621,8 +624,14 @@ void plutovg_path_traverse_dashed(const plutovg_path_t* path, float offset, cons
     dasher.current_point = PLUTOVG_EMPTY_POINT;
     dasher.traverse_func = traverse_func;
     dasher.closure = closure;
-    dasher.budget = PLUTOVG_MAX_DASH_SEGMENTS;
-    plutovg_path_traverse_flatten(path, dash_traverse_func, &dasher);
+    dasher.budget = budget;
+    traverse_flatten(path, dash_traverse_func, &dasher, budget);
+}
+
+void plutovg_path_traverse_dashed(const plutovg_path_t* path, float offset, const float* dashes, int ndashes, plutovg_path_traverse_func_t traverse_func, void* closure)
+{
+    long budget = PLUTOVG_MAX_DASH_SEGMENTS;
+    traverse_dashed(path, offset, dashes, ndashes, traverse_func, closure, &budget);
 }
 
 plutovg_path_t* plutovg_path_clone(const plutovg_path_t* path)
@@ -665,9 +674,15 @@ plutovg_path_t* plutovg_path_clone_flatten(const plutovg_path_t* path)
 
 plutovg_path_t* plutovg_path_clone_dashed(const plutovg_path_t* path, float offset, const float* dashes, int ndashes)
 {
+    long budget = PLUTOVG_MAX_DASH_SEGMENTS;
+    return plutovg_path_clone_dashed_budget(path, offset, dashes, ndashes, &budget);
+}
+
+plutovg_path_t* plutovg_path_clone_dashed_budget(const plutovg_path_t* path, float offset, const float* dashes, int ndashes, long* budget)
+{
     plutovg_path_t* clone = plutovg_path_create();
     plutovg_path_reserve(clone, path->elements.size + path->num_curves * 32);
-    plutovg_path_traverse_dashed(path, offset, dashes, ndashes, clone_traverse_func, clone);
+    traverse_dashed(path, offset, dashes, ndashes, clone_traverse_func, clone, budget);
     return clone;
 }
 
