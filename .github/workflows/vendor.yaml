@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     name: verify-vendor fails without a patch
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: tools/verify-vendor --canary
 
   # R CMD check NOTEs a shared object that references stdout/stderr, printf,
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     name: no console or exit symbols; only R_init_zusvg exported
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
@@ -59,6 +59,6 @@ jobs:
     runs-on: ubuntu-latest
     name: the <use> depth patch is load-bearing
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: r-lib/actions/setup-r@v2
       - run: tools/check-use-chain
