@@ -30,3 +30,9 @@ across Linux, macOS and Windows on x86-64 and arm64.
 0 errors | 0 warnings | 1 note
 
 * This is a new submission.
+
+## Method References
+
+There are no published references describing the methods in this package.
+It wraps the plutosvg and plutovg libraries, cited in `Description` and
+`inst/COPYRIGHTS`.

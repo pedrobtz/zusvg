@@ -19,6 +19,14 @@ badges, which mostly need text, use [rsvg](https://docs.ropensci.org/rsvg/).
 
 ## Installation
 
+Install zusvg from CRAN with:
+
+``` r
+install.packages("zusvg")
+```
+
+or the development version from GitHub with:
+
 ``` r
 # install.packages("pak")
 pak::pak("pedrobtz/zusvg")
