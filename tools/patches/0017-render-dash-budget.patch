@@ -1,0 +1,306 @@
+Subject: One dash budget per canvas, counting flattened curve segments
+
+0012 gave each dashed traversal a budget of one million dash segments,
+but two things escaped it, both found by zusvg's fuzzer. Flattening a
+cubic subdivides to a depth of 31 in user units, so one curve hundreds of
+millions of units long became 37 million line segments before a single
+dash was cut, and none of them was counted. And the budget was per path,
+so every <use> of a dashed path, or every dashed path in a document,
+brought a million more.
+
+Keep the budget in plutovg_canvas_t, so that every stroke made on one
+canvas shares PLUTOVG_MAX_DASH_SEGMENTS (one million), and charge
+flattened segments to it as well as dashes. When it is spent, a curve
+being flattened is finished with straight segments to its pending end
+points, and later strokes are drawn solid without dashing, their curves
+left to the FreeType stroker. plutovg_path_traverse_dashed() and
+plutovg_path_clone_dashed() keep one budget per call; the internal
+plutovg_path_clone_dashed_budget() takes the canvas's.
+
+zusvg: .agents/design.md §12, D18; issue #27. Offered upstream.
+
+--- a/plutovg/source/plutovg-canvas.c
++++ b/plutovg/source/plutovg-canvas.c
+@@ -91,6 +91,7 @@
+     canvas->clip_rect = PLUTOVG_MAKE_RECT(0, 0, surface->width, surface->height);
+     plutovg_span_buffer_init(&canvas->clip_spans);
+     plutovg_span_buffer_init(&canvas->fill_spans);
++    canvas->dash_budget = PLUTOVG_MAX_DASH_SEGMENTS;
+     return canvas;
+ }
+ 
+@@ -504,13 +505,13 @@
+ 
+ bool plutovg_canvas_fill_contains(plutovg_canvas_t* canvas, float x, float y)
+ {
+-    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
++    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, NULL, canvas->state->winding, NULL);
+     return plutovg_span_buffer_contains(&canvas->fill_spans, x, y);
+ }
+ 
+ bool plutovg_canvas_stroke_contains(plutovg_canvas_t* canvas, float x, float y)
+ {
+-    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
++    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, NULL, canvas->state->winding, NULL);
+     return plutovg_span_buffer_contains(&canvas->fill_spans, x, y);
+ }
+ 
+@@ -530,13 +531,13 @@
+ 
+ void plutovg_canvas_fill_extents(plutovg_canvas_t *canvas, plutovg_rect_t* extents)
+ {
+-    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, NULL, canvas->state->winding);
++    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, NULL, canvas->state->winding, NULL);
+     plutovg_span_buffer_extents(&canvas->fill_spans, extents);
+ }
+ 
+ void plutovg_canvas_stroke_extents(plutovg_canvas_t *canvas, plutovg_rect_t* extents)
+ {
+-    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, &canvas->state->stroke, PLUTOVG_FILL_RULE_NON_ZERO);
++    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, NULL, &canvas->state->stroke, PLUTOVG_FILL_RULE_NON_ZERO, &canvas->dash_budget);
+     plutovg_span_buffer_extents(&canvas->fill_spans, extents);
+ }
+ 
+@@ -582,7 +583,7 @@
+ 
+ void plutovg_canvas_fill_preserve(plutovg_canvas_t* canvas)
+ {
+-    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
++    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding, NULL);
+     if(canvas->state->clipping) {
+         plutovg_span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
+         plutovg_blend(canvas, &canvas->clip_spans);
+@@ -593,7 +594,7 @@
+ 
+ void plutovg_canvas_stroke_preserve(plutovg_canvas_t* canvas)
+ {
+-    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, PLUTOVG_FILL_RULE_NON_ZERO);
++    plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, &canvas->state->stroke, PLUTOVG_FILL_RULE_NON_ZERO, &canvas->dash_budget);
+     if(canvas->state->clipping) {
+         plutovg_span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
+         plutovg_blend(canvas, &canvas->clip_spans);
+@@ -605,11 +606,11 @@
+ void plutovg_canvas_clip_preserve(plutovg_canvas_t* canvas)
+ {
+     if(canvas->state->clipping) {
+-        plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
++        plutovg_rasterize(&canvas->fill_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding, NULL);
+         plutovg_span_buffer_intersect(&canvas->clip_spans, &canvas->fill_spans, &canvas->state->clip_spans);
+         plutovg_span_buffer_copy(&canvas->state->clip_spans, &canvas->clip_spans);
+     } else {
+-        plutovg_rasterize(&canvas->state->clip_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding);
++        plutovg_rasterize(&canvas->state->clip_spans, canvas->path, &canvas->state->matrix, &canvas->clip_rect, NULL, canvas->state->winding, NULL);
+         canvas->state->clipping = true;
+     }
+ }
+--- a/plutovg/source/plutovg-path.c
++++ b/plutovg/source/plutovg-path.c
+@@ -461,7 +461,7 @@
+     first->y4 = second->y1 = (first->y3 + second->y2) * 0.5f;
+ }
+ 
+-void plutovg_path_traverse_flatten(const plutovg_path_t* path, plutovg_path_traverse_func_t traverse_func, void* closure)
++static void traverse_flatten(const plutovg_path_t* path, plutovg_path_traverse_func_t traverse_func, void* closure, long* budget)
+ {
+     if(path->num_curves == 0) {
+         plutovg_path_traverse(path, traverse_func, closure);
+@@ -507,9 +507,11 @@
+                     l = 1.f;
+                 }
+ 
+-                if(d < threshold*l || b == beziers + 31) {
++                if(d < threshold*l || b == beziers + 31 || (budget && *budget <= 0)) {
+                     plutovg_point_t p = { b->x4, b->y4 };
+                     traverse_func(closure, PLUTOVG_PATH_COMMAND_LINE_TO, &p, 1);
++                    if(budget && *budget > 0)
++                        --*budget;
+                     --b;
+                 } else {
+                     split_bezier(b, b + 1, b);
+@@ -523,6 +525,11 @@
+     }
+ }
+ 
++void plutovg_path_traverse_flatten(const plutovg_path_t* path, plutovg_path_traverse_func_t traverse_func, void* closure)
++{
++    traverse_flatten(path, traverse_func, closure, NULL);
++}
++
+ typedef struct {
+     const float* dashes; int ndashes;
+     float start_phase; float phase;
+@@ -531,13 +538,9 @@
+     plutovg_point_t current_point;
+     plutovg_path_traverse_func_t traverse_func;
+     void* closure;
+-    long budget;
++    long* budget;
+ } dasher_t;
+ 
+-/* The most dash segments one path makes; past it, and wherever a dash is
+- * too small to advance in single precision, the rest is drawn solid. */
+-#define PLUTOVG_MAX_DASH_SEGMENTS 1000000L
+-
+ static void dash_traverse_func(void* closure, plutovg_path_command_t command, const plutovg_point_t* points, int npoints)
+ {
+     dasher_t* dasher = (dasher_t*)(closure);
+@@ -560,13 +563,13 @@
+     float dist1 = 0.f;
+     while(dist0 - dist1 > dasher->dashes[dasher->index % dasher->ndashes] - dasher->phase) {
+         float next = dist1 + dasher->dashes[dasher->index % dasher->ndashes] - dasher->phase;
+-        if(dasher->budget <= 0 || !(next > dist1)) {
+-            dasher->budget = 0;
++        if(*dasher->budget <= 0 || !(next > dist1)) {
++            *dasher->budget = 0;
+             dasher->toggle = true;
+             break;
+         }
+ 
+-        dasher->budget--;
++        --*dasher->budget;
+         dist1 = next;
+         float a = dist1 / dist0;
+         plutovg_point_t p = { p0.x + a * dx, p0.y + a * dy };
+@@ -589,7 +592,7 @@
+     dasher->current_point = p1;
+ }
+ 
+-void plutovg_path_traverse_dashed(const plutovg_path_t* path, float offset, const float* dashes, int ndashes, plutovg_path_traverse_func_t traverse_func, void* closure)
++static void traverse_dashed(const plutovg_path_t* path, float offset, const float* dashes, int ndashes, plutovg_path_traverse_func_t traverse_func, void* closure, long* budget)
+ {
+     float dash_sum = 0.f;
+     for(int i = 0; i < ndashes; ++i)
+@@ -621,10 +624,16 @@
+     dasher.current_point = PLUTOVG_EMPTY_POINT;
+     dasher.traverse_func = traverse_func;
+     dasher.closure = closure;
+-    dasher.budget = PLUTOVG_MAX_DASH_SEGMENTS;
+-    plutovg_path_traverse_flatten(path, dash_traverse_func, &dasher);
++    dasher.budget = budget;
++    traverse_flatten(path, dash_traverse_func, &dasher, budget);
+ }
+ 
++void plutovg_path_traverse_dashed(const plutovg_path_t* path, float offset, const float* dashes, int ndashes, plutovg_path_traverse_func_t traverse_func, void* closure)
++{
++    long budget = PLUTOVG_MAX_DASH_SEGMENTS;
++    traverse_dashed(path, offset, dashes, ndashes, traverse_func, closure, &budget);
++}
++
+ plutovg_path_t* plutovg_path_clone(const plutovg_path_t* path)
+ {
+     plutovg_path_t* clone = plutovg_path_create();
+@@ -665,9 +674,15 @@
+ 
+ plutovg_path_t* plutovg_path_clone_dashed(const plutovg_path_t* path, float offset, const float* dashes, int ndashes)
+ {
++    long budget = PLUTOVG_MAX_DASH_SEGMENTS;
++    return plutovg_path_clone_dashed_budget(path, offset, dashes, ndashes, &budget);
++}
++
++plutovg_path_t* plutovg_path_clone_dashed_budget(const plutovg_path_t* path, float offset, const float* dashes, int ndashes, long* budget)
++{
+     plutovg_path_t* clone = plutovg_path_create();
+     plutovg_path_reserve(clone, path->elements.size + path->num_curves * 32);
+-    plutovg_path_traverse_dashed(path, offset, dashes, ndashes, clone_traverse_func, clone);
++    traverse_dashed(path, offset, dashes, ndashes, clone_traverse_func, clone, budget);
+     return clone;
+ }
+ 
+--- a/plutovg/source/plutovg-private.h
++++ b/plutovg/source/plutovg-private.h
+@@ -162,8 +162,18 @@
+     plutovg_rect_t clip_rect;
+     plutovg_span_buffer_t clip_spans;
+     plutovg_span_buffer_t fill_spans;
++    long dash_budget;
+ };
+ 
++/* The most segments dashing makes: per call of the public path API, and
++ * per canvas in rendering, so that every stroke of a render shares one
++ * budget. Flattened curve segments count as well as dashes. Past it, and
++ * wherever a dash is too small to advance in single precision, the rest is
++ * drawn solid. */
++#define PLUTOVG_MAX_DASH_SEGMENTS 1000000L
++
++plutovg_path_t* plutovg_path_clone_dashed_budget(const plutovg_path_t* path, float offset, const float* dashes, int ndashes, long* budget);
++
+ void plutovg_span_buffer_init(plutovg_span_buffer_t* span_buffer);
+ void plutovg_span_buffer_init_rect(plutovg_span_buffer_t* span_buffer, int x, int y, int width, int height);
+ void plutovg_span_buffer_reset(plutovg_span_buffer_t* span_buffer);
+@@ -173,7 +183,7 @@
+ void plutovg_span_buffer_extents(plutovg_span_buffer_t* span_buffer, plutovg_rect_t* extents);
+ void plutovg_span_buffer_intersect(plutovg_span_buffer_t* span_buffer, const plutovg_span_buffer_t* a, const plutovg_span_buffer_t* b);
+ 
+-void plutovg_rasterize(plutovg_span_buffer_t* span_buffer, const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_rect_t* clip_rect, const plutovg_stroke_data_t* stroke_data, plutovg_fill_rule_t winding);
++void plutovg_rasterize(plutovg_span_buffer_t* span_buffer, const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_rect_t* clip_rect, const plutovg_stroke_data_t* stroke_data, plutovg_fill_rule_t winding, long* dash_budget);
+ void plutovg_blend(plutovg_canvas_t* canvas, const plutovg_span_buffer_t* span_buffer);
+ void plutovg_memfill32(unsigned int* dest, int length, unsigned int value);
+ 
+--- a/plutovg/source/plutovg-rasterize.c
++++ b/plutovg/source/plutovg-rasterize.c
+@@ -267,12 +267,12 @@
+     }
+ }
+ 
+-static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data);
++static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data, long* dash_budget);
+ 
+-static PVG_FT_Outline* ft_outline_convert(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data)
++static PVG_FT_Outline* ft_outline_convert(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data, long* dash_budget)
+ {
+     if(stroke_data) {
+-        return ft_outline_convert_stroke(path, matrix, stroke_data);
++        return ft_outline_convert_stroke(path, matrix, stroke_data, dash_budget);
+     }
+ 
+     plutovg_path_iterator_t it;
+@@ -304,17 +304,22 @@
+     return outline;
+ }
+ 
+-static PVG_FT_Outline* ft_outline_convert_dash(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_dash_t* stroke_dash)
++static PVG_FT_Outline* ft_outline_convert_dash(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_dash_t* stroke_dash, long* dash_budget)
+ {
+-    if(stroke_dash->array.size == 0)
+-        return ft_outline_convert(path, matrix, NULL);
+-    plutovg_path_t* dashed = plutovg_path_clone_dashed(path, stroke_dash->offset, stroke_dash->array.data, stroke_dash->array.size);
+-    PVG_FT_Outline* outline = ft_outline_convert(dashed, matrix, NULL);
++    if(stroke_dash->array.size == 0 || (dash_budget && *dash_budget <= 0))
++        return ft_outline_convert(path, matrix, NULL, NULL);
++    plutovg_path_t* dashed;
++    if(dash_budget) {
++        dashed = plutovg_path_clone_dashed_budget(path, stroke_dash->offset, stroke_dash->array.data, stroke_dash->array.size, dash_budget);
++    } else {
++        dashed = plutovg_path_clone_dashed(path, stroke_dash->offset, stroke_dash->array.data, stroke_dash->array.size);
++    }
++    PVG_FT_Outline* outline = ft_outline_convert(dashed, matrix, NULL, NULL);
+     plutovg_path_destroy(dashed);
+     return outline;
+ }
+ 
+-static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data)
++static PVG_FT_Outline* ft_outline_convert_stroke(const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_stroke_data_t* stroke_data, long* dash_budget)
+ {
+     double scale_x = sqrt(matrix->a * matrix->a + matrix->b * matrix->b);
+     double scale_y = sqrt(matrix->c * matrix->c + matrix->d * matrix->d);
+@@ -358,7 +363,7 @@
+     PVG_FT_Stroker_New(&stroker);
+     PVG_FT_Stroker_Set(stroker, ftWidth, ftCap, ftJoin, ftMiterLimit);
+ 
+-    PVG_FT_Outline* outline = ft_outline_convert_dash(path, matrix, &stroke_data->dash);
++    PVG_FT_Outline* outline = ft_outline_convert_dash(path, matrix, &stroke_data->dash, dash_budget);
+     PVG_FT_Stroker_ParseOutline(stroker, outline);
+ 
+     PVG_FT_UInt points;
+@@ -379,9 +384,9 @@
+     plutovg_array_append_data(span_buffer->spans, spans, count);
+ }
+ 
+-void plutovg_rasterize(plutovg_span_buffer_t* span_buffer, const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_rect_t* clip_rect, const plutovg_stroke_data_t* stroke_data, plutovg_fill_rule_t winding)
++void plutovg_rasterize(plutovg_span_buffer_t* span_buffer, const plutovg_path_t* path, const plutovg_matrix_t* matrix, const plutovg_rect_t* clip_rect, const plutovg_stroke_data_t* stroke_data, plutovg_fill_rule_t winding, long* dash_budget)
+ {
+-    PVG_FT_Outline* outline = ft_outline_convert(path, matrix, stroke_data);
++    PVG_FT_Outline* outline = ft_outline_convert(path, matrix, stroke_data, dash_budget);
+     if(stroke_data) {
+         outline->flags = PVG_FT_OUTLINE_NONE;
+     } else {

@@ -263,7 +263,7 @@ Warnings: `zusvg_text_skipped` and `zusvg_clip_skipped` (§6.4). Every class inh
 | `max_pixels` | 5e7 | `width * height` before the surface; at most just under 2^29 (§6.1) |
 | `images` | `TRUE` | `FALSE` refuses `<image` before any decode |
 | render steps | 1e6 (fixed) | element visits in one render; patch `0009`, D18 |
-| dash segments | 1e6 per path (fixed) | patch `0012`; the rest is drawn solid |
+| dash segments | 1e6 per render (fixed) | dashes and flattened curve segments, shared by every stroke; patches `0012` and `0017`; the rest is drawn solid |
 | embedded image | 4096 a side (fixed) | `STBI_MAX_DIMENSIONS`; a larger image is not decoded, D19 |
 
 An SVG that is small and valid can still be expensive: a 100 by 100 document rendered at `width = 30000` is a 3.6 GB surface, which `max_pixels` refuses; a `<use>` fan-out (a group that uses one symbol ten times, wrapped in a symbol that a group uses ten times, and so on) multiplies drawing work by ten per level while the document grows by a few lines, so twenty levels in a kilobyte draw 10^20 shapes. This is the "billion laughs" of SVG. No input limit catches it, and `R_CheckUserInterrupt()` cannot interrupt it mid-render, since plutosvg has no callback. §18 Q2 records that as the open hostile case; the fuzz job runs with a per-input timeout to find such documents and they go into the corpus as known slow inputs. Gradients and dash arrays are bounded by plutosvg itself (*read 2026-10-08*: `MAX_DASHES` 128, `MAX_STOPS` 64, `MAX_GRADIENT_DEPTH` 128 for `href` chains between gradients).
@@ -355,7 +355,7 @@ The four survey icons (Lucide, Material, Font Awesome, Bootstrap "home") load in
 | D15 | Clip paths | for 0.1.0, a `zusvg_clip_skipped` warning when a document references a clip path that is not a full-canvas rectangle, with `has_clip` in `svg_elements()`; a patch applying `clip-path`, offered upstream, after 0.1.0 (§3's survey; §18 Q8) |
 | D16 | gzip input | decompressed with base R (`file()`, `gzfile()`) under the bounded read; no zukomp, and no `zusvg_unsupported_input` class (§10) |
 | D17 | `<use>` of a `<symbol>` or `<svg>` | sized by the `<use>`'s `width` and `height` where given (SVG 1.1 §5.6), through patch `0008-use-symbol-size`, offered upstream (§9) |
-| D18 | Render work | at most one million element visits per render (patch `0009`), then `zusvg_limit_error` with `limit = "render_steps"`; one million dash segments per path (patch `0012`), the rest drawn solid (§12) |
+| D18 | Render work | at most one million element visits per render (patch `0009`), then `zusvg_limit_error` with `limit = "render_steps"`; one million dash segments per render, counting flattened curve segments (patches `0012` and `0017`), the rest drawn solid (§12) |
 | D19 | Embedded image size | `STBI_MAX_DIMENSIONS=4096`: a larger embedded image is not decoded and draws nothing (§12) |
 
 Reasons where they are not in the section cited:
@@ -379,6 +379,7 @@ Reasons where they are not in the section cited:
   - `0012-dash-budget` (Stage 5): D18. The fuzzer found a dash explosion that ran out of memory and, in single precision, never ended.
   - `0015-use-ancestor-cycle` (Stage 5): a `<use>` of its own ancestor renders nothing. Otherwise `render_use()`'s parent rewrite makes the parent chain a loop that attribute inheritance walks forever; the step budget does not see it, because no element is visited. CI's fuzzer found it.
   - `0016-blend-defined-casts` (Stage 5): the gradient and texture float-to-int casts are defined for NaN and out-of-range values, and texture positions step in 64 bits. CI's fuzzer found a NaN gradient position.
+  - `0017-render-dash-budget` (2026-10-22): D18. The dash budget moves from each path to the canvas, so one render shares it, and flattened curve segments count against it. CI's fuzzer found a 581-byte path that flattened into 37 million segments, and a `<use>` of a dashed path multiplied 0012's per-path budget (#27).
   - `0013-stroker-empty-border` (Stage 5): a NULL `memcpy()` source when stroking a one-point polygon. CI's fuzzer, on Linux x86-64, found it.
 
   Expected later:

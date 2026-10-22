@@ -30,6 +30,31 @@ test_that("a long dashed path is bounded in segments and time (0012)", {
   expect_quick(elapsed, 10)
 })
 
+test_that("a dashed curve hundreds of millions of units long is bounded (0017)", {
+  # CI's fuzzer (#27): flattening this one path made 37 million segments,
+  # none of which 0012's per-path dash budget counted. Drawn three times.
+  txt <- svg_text(paste0(
+    '<path id="c" d="M8 16 C4 4 2 8 4 0 8 18 24 30 0 8 18 24 30 8 4 2 8 28 4 28 0 ',
+    '666666666 -6666666 0 666666666 24 30 0 8 36 24 30 4 30" fill="none" stroke="#c00" ',
+    'stroke-width="3" stroke-dasharray="2"/>',
+    strrep('<use href="#c"/>', 2)
+  ))
+  elapsed <- system.time(r <- svg_render(txt))[["elapsed"]]
+  expect_s3_class(r, "nativeRaster")
+  expect_quick(elapsed, 5)
+})
+
+test_that("one dash budget covers every stroke of a render (0017)", {
+  # A per-path budget is multiplied by each <use> of the path.
+  txt <- svg_text(paste0(
+    '<path id="p" d="M0 8H10000000" stroke="#c00" stroke-dasharray="1"/>',
+    strrep('<use href="#p"/>', 40)
+  ))
+  elapsed <- system.time(r <- svg_render(txt))[["elapsed"]]
+  expect_s3_class(r, "nativeRaster")
+  expect_quick(elapsed, 5)
+})
+
 test_that("an embedded image larger than 4096 pixels a side is not decoded", {
   # A 1 by 1 PNG whose header claims 5000 by 1: refused by stb_image's
   # STBI_MAX_DIMENSIONS before any decode, so nothing is drawn.
