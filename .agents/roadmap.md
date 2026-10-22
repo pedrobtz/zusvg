@@ -313,7 +313,7 @@ Reusable workflows from `pedrobtz/r-actions`. The scaffold's `R-CMD-check.yaml` 
 
 ## Stage 7 — pkgdown site, vignette, CRAN · S
 
-**Status:** preparation done 2026-10-08 (#21). zufast 0.1.0 reached CRAN on 2026-10-21, and on 2026-10-22 `Remotes:` was removed and Windows R-devel added to the check runners; the submission waits for a full green CI run and the fuzz timeout fix (#27).
+**Status:** preparation done 2026-10-08 (#21). zufast 0.1.0 reached CRAN on 2026-10-21, and on 2026-10-22 `Remotes:` was removed and Windows R-devel added to the check runners; the fuzz timeout (#27) was fixed by patch 0017 (#29). The submission waits for a full green CI run on `main`.
 
 **Do**
 

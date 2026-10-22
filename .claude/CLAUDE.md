@@ -13,7 +13,7 @@ It is a member of the `zu*` family (sibling checkouts in `../`), the first whose
 
 ## Current state
 
-**2026-10-22: 0.1.0 is ready to submit once CI is green.** Stages 0–6 are merged (#11, #15–#20), and Stage 7's preparation is too (#21): vignette, README, pkgdown, `cran-comments.md`, `Version: 0.1.0`. zufast 0.1.0 reached CRAN on 2026-10-21 and `Remotes:` is gone. Before submitting: a full green R CMD check run, and the fuzz timeout (#27) fixed so `hardening` is green. #10 stays open until CRAN accepts. Sixteen patches are applied to the vendored libraries (`tools/patches/`). Design §16 records the benchmarks, and the roadmap's Stage 7 table records the §19 acceptance criteria. Tracking: parent #2.
+**2026-10-22: 0.1.0 is ready to submit once CI is green.** Stages 0–6 are merged (#11, #15–#20), and Stage 7's preparation is too (#21): vignette, README, pkgdown, `cran-comments.md`, `Version: 0.1.0`. zufast 0.1.0 reached CRAN on 2026-10-21 and `Remotes:` is gone. The fuzz timeout (#27) is fixed by patch 0017 (#29). Before submitting: a full green CI run on `main`. #10 stays open until CRAN accepts. Seventeen patches are applied to the vendored libraries (`tools/patches/`). Design §16 records the benchmarks, and the roadmap's Stage 7 table records the §19 acceptance criteria. Tracking: parent #2.
 
 Update this paragraph at the end of every stage.
 
