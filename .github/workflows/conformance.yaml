@@ -26,7 +26,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     name: rsvg cross-check
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install librsvg
         run: |
           sudo apt-get update
@@ -60,7 +60,7 @@ jobs:
     name: benchmarks (informational)
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install librsvg
         run: |
           sudo apt-get update
