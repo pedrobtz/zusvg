@@ -7,7 +7,7 @@
 # fails a check.
 on:
   schedule:
-    - cron: '0 7 * * 1'
+    - cron: '52 0 * * 1'
   workflow_dispatch:
 
 name: vendor-upstream
