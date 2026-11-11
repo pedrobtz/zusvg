@@ -11,3 +11,8 @@
 ^src/.*\.o$
 ^src/.*\.so$
 ^src/.*\.dll$
+^\.superpowers$
+^\.worktrees$
+^CLAUDE\.md$
+^AGENTS\.md$
+^CRAN-SUBMISSION$
