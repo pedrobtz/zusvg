@@ -2,7 +2,7 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/pedrobtz/zusvg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pedrobtz/zusvg/actions/workflows/R-CMD-check.yaml)
-[![coverage](https://raw.githubusercontent.com/pedrobtz/zusvg/main/.github/badges/coverage.svg)](https://github.com/pedrobtz/zusvg/actions/workflows/coverage.yaml)
+[![coverage](https://raw.githubusercontent.com/pedrobtz/zusvg/gh-pages/badges/coverage.svg)](https://github.com/pedrobtz/zusvg/actions/workflows/coverage.yaml)
 <!-- badges: end -->
 
 zusvg renders SVG icons and logos to pixels: a `nativeRaster` for grid and
