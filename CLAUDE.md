@@ -5,16 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Shared conventions
 
-The portfolio's shared rules are synced into `.claude/shared/` from
-`pedrobtz/packages:claude/shared/`. Never edit them here. Where this file and
-a shared file disagree, this file wins for this package.
+<!-- r-skills: shared-rules -->
 
-@.claude/shared/workflow.md
-@.claude/shared/r-package.md
-@.claude/shared/ci.md
-@.claude/shared/native-code.md
-@.claude/shared/correctness.md
-@.claude/shared/assurance.md
+The portfolio's shared rules (`workflow`, `r-package`, `ci`, `native-code`,
+`correctness`, `assurance`) come from the
+[r-skills](https://github.com/pedrobtz/r-skills) plugin's `rules/`, loaded at
+session start because of the marker above. Never copy them here. Where this
+file and a shared rule disagree, this file wins for this package. Cloud
+sessions do not load the plugin and run without them.
 
 ## What this is
 
@@ -78,7 +76,7 @@ The name itself is open until the first tag (design §18 Q7).
 
 ## Commands
 
-The everyday `devtools` commands are in `.claude/shared/r-package.md`;
+The everyday `devtools` commands are in the shared `r-package.md` rules;
 `load_all()` compiles both vendor trees. The check here runs in CRAN mode with
 the clock check off:
 
@@ -239,7 +237,7 @@ the zsv library, which defines `zsv_*` identifiers (design §3).
 
 ## Editing rules
 
-These add to `.claude/shared/r-package.md`, or depart from it where stated.
+These add to the shared `r-package.md` rules, or depart from it where stated.
 
 - **No `README.Rmd`, unlike the shared rule**: edit `README.md` directly and
   run its example.
@@ -340,7 +338,7 @@ parts for `ft-raster` and `ft-stroker`) pinned at **v1.3.3**, both
 upstream's latest releases on 2026-10-08, in `src/vendor/plutosvg/` and
 `src/vendor/plutovg/` with provenance in `src/vendor/PROVENANCE`. Re-vendor
 with `tools/update-plutosvg`, never by hand. The rules are in
-`.claude/shared/native-code.md`; what follows is zusvg's.
+the shared `native-code.md` rules; what follows is zusvg's.
 
 - Re-check upstream for a newer tag and for security advisories before
   every pin.
